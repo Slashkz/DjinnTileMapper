@@ -20,7 +20,6 @@ type
     tbSaveMap: TToolButton;
     OpenMap: TOpenDialog;
     SaveMap: TSaveDialog;
-    il1: TImageList;
     tbGrid: TToolButton;
     sbEdit: TSpeedButton;
     sbDraw: TSpeedButton;

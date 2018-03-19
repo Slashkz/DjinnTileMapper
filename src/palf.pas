@@ -11,9 +11,6 @@ type
     tlb1: TToolBar;
     tbOpenaPal: TToolButton;
     tbSavePal: TToolButton;
-    tbHot: TImageList;
-    tbCold: TImageList;
-    tbDisabled: TImageList;
     scrlbx1: TScrollBox;
     PalImage: TImage;
     procedure FormMouseDown(Sender: TObject; Button: TMouseButton;

@@ -7,7 +7,7 @@ uses
   Dialogs, StdCtrls, Spin, ExtCtrls, Buttons,
   ComCtrls,
   ToolWin,
-  ImgList, System.ImageList, GameMode, System.Actions, Vcl.ActnList, Clipbrd,
+  ImgList, System.ImageList, System.Actions, Vcl.ActnList, Clipbrd,
   Vcl.StdActns;
 
 type
@@ -43,17 +43,14 @@ type
     cbMapFormat: TComboBox;
     btn1: TToolButton;
     ToolButton1: TToolButton;
-    il1: TImageList;
     tbGoTo: TToolButton;
     sbUp: TSpeedButton;
     sbDown: TSpeedButton;
     btn2: TToolButton;
     tbOpenMap: TToolButton;
     tbSaveMap: TToolButton;
-    il2: TImageList;
     tbShowHexNums: TToolButton;
     tbShowGameMode: TToolButton;
-    Timer1: TTimer;
     ActionList1: TActionList;
     BlockPaste: TAction;
     tbSelectTiles: TToolButton;

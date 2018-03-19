@@ -618,7 +618,7 @@ begin
       For x := 0 to 16 - 1 do
       begin
         //HexNums.Picture.Bitmap.Canvas.TextOut(MapXY[I].X * TileWx2, MapXY[I].Y * TileHx2, IntToHex(I, 2));
-        DTM.HexNumbers.Draw(TileMap.Picture.Bitmap.Canvas, MapXY[I].X * TileWx2, MapXY[I].Y * TileHx2, I and $FF, True);
+        DTM.hexnums3.Draw(TileMap.Picture.Bitmap.Canvas, MapXY[I].X * TileWx2, MapXY[I].Y * TileHx2, I and $7FF, True);
         //DjinnTileMapper.HexNumbers.Draw(Bitmap.Canvas, 0, 0, I and $FF, True);
         //HexNums.Picture.Bitmap.Canvas.Draw( MapXY[I].X * TileWx2, MapXY[I].Y * TileHx2, Bitmap);
         Inc(I);

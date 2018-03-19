@@ -193,7 +193,6 @@ type
     ToolBarCold: TImageList;
     ToolBarHot: TImageList;
     ToolbarDisabled: TImageList;
-    HexNumbers: TImageList;
     ShowMetatilesMap: TMenuItem;
     hexnums3: TImageList;
     procedure FormShow(Sender: TObject);
@@ -321,8 +320,8 @@ type
   PromData = ^TromData;
   TRomData = array[0..10 * 1024 * 1024] of Byte;
 
-  PBlockData = ^TBlockData;
-  TBlockData = array[0..10 * 1024 * 1024] of TBlock;
+//  PBlockData = ^TBlockData;
+//  TBlockData = array[0..10 * 1024 * 1024] of TBlock;
   TTable = array[Byte] of string;
 
   TTileTable = array[Byte] of Byte;
