@@ -273,101 +273,6 @@ begin
     bMouseDown:= True;
   end;
 end;
-{
-  if ROMopened and (ssCtrl in Shift) and not bMouseDown then
-  begin
-    bMouseDown:= True;
-    iMouseX:= X div TileWx2;
-    iMouseY:= Y div TileHx2;
-    if bSwapXY then
-       I :=  iWSWidth * iMouseY * PatternSize  + iMouseX * PatternSize
-    else
-       I := iMouseY * PatternSize + iWSHeight * iMouseX * PatternSize;
-
-    if DjinnTileMapper.MapFormat < mfGBA then
-    begin
-      case dewidth of
-        1:
-          begin
-            MT[0, 0]:= WSMap[I];
-            TileMap[0, 0]:= MT[0, 0];
-          end;
-        2, 4, 8, 16:
-          begin
-            if bSwapXY then
-            begin
-              for YY:= 0 to deheight - 1 do
-              begin
-                for XX:= 0 to dewidth - 1 do
-                begin
-                  MT[YY, XX]:=  WSMap[I];
-                  TileMap[YY, XX]:= MT[YY, XX];
-                  Inc(I);
-                end;
-                Dec(I, dewidth);
-                Inc(I, iWSWidth);
-              end;
-            end
-            else
-            begin
-              for YY:= 0 to deheight - 1 do
-              begin
-                for XX:= 0 to dewidth - 1 do
-                begin
-                  MT[YY, XX]:=  WSMap[I];
-                  TileMap[YY, XX]:= MT[YY, XX];
-                  Inc(I, iWSHeight);
-                end;
-                Dec(I, iWSHeight * dewidth);
-                Inc(I);
-              end;
-            end;
-          end;
-      end;
-    end
-    else
-    begin
-      case dewidth of
-        1:
-          begin
-            MT[0, 0]:= (WSMap[I] shl 8) or WSMap[I + 1];
-            TileMap[0, 0]:= MT[0, 0];
-          end;
-        2, 4, 8, 16:
-          begin
-            if bSwapXY then
-            begin
-              for YY:= 0 to deheight - 1 do
-              begin
-                for XX:= 0 to dewidth - 1 do
-                begin
-                  MT[YY, XX]:=  (WSMap[I] shl 8) or WSMap[I+ 1];
-                  TileMap[YY, XX]:= MT[YY, XX];
-                  Inc(I, 2);
-                end;
-                Dec(I, dewidth * 2);
-                Inc(I, iWSWidth * 2);
-              end;
-            end
-            else
-            begin
-              for YY:= 0 to deheight - 1 do
-              begin
-                for XX:= 0 to dewidth - 1 do
-                begin
-                  MT[YY, XX]:=  (WSMap[I] shl 8) or WSMap[I + 1];
-                  TileMap[YY, XX]:= MT[YY, XX];
-                  Inc(I, iWSHeight * 2);
-                end;
-                Dec(I, iWSHeight* dewidth * 2);
-                Inc(I, 2);
-              end;
-            end;
-          end;
-      end;
-    end;
-  end;
-end; }
 
 procedure TWSForm.WorkSpaceMouseUp(Sender: TObject; Button: TMouseButton;
   Shift: TShiftState; X, Y: Integer);
@@ -381,11 +286,7 @@ begin
     W:= Block.Width div TileWx2;  //Количиестов тайлов по горизонтали
     H:= Block.Height div TileHx2; //Количество тайлов по вертикали
     Nums:= W * H; // Определяем кол-во выделенных тайлов
-    for I := Low(SelectTiles) to High(SelectTiles) do
-    begin
-      SelectTiles[I].Free;
-    end;
-    SetLength(SelectTiles, Nums);
+    SetSize(SelectTiles, Nums);
     if bSwapXY then
     begin
       PatternPos:= (YY div TileHx2) * iWSWidth + (XX div TileWx2);
@@ -393,7 +294,6 @@ begin
       begin
         for J := 0 to W - 1 do
           begin
-            SelectTiles[I * W + J]:= TBlock.Create;
             SelectTiles[I * W + J].Index:= WSMap[PatternPos + J].Index;
           end;
           Inc(PatternPos, iWSWidth);
@@ -406,7 +306,6 @@ begin
       begin
         for J := 0 to H - 1 do
           begin
-            SelectTiles[I * H + J]:= TBlock.Create;
             SelectTiles[I * H + J].Value:= WSMap[PatternPos + J].Value;
           end;
           Inc(PatternPos, iWSHeight);
@@ -416,101 +315,6 @@ begin
   end;
   bMouseDown:= False;
 end;
-  {XX:= X div TileWx2; YY:= Y div TileHx2;
-  if ROMopened and (ssCtrl in Shift)  and bMouseDown and (X <> iMouseX) and (Y <> iMouseY)  then
-  begin
-    bMouseDown:= False;
-    iMouseX:= X;
-    iMouseY:= Y;
-    if bSwapXY then
-       I := iWSWidth * (iMouseY div TileHx2) * PatternSize + (iMouseX div TileWx2) * PatternSize
-    else
-       I := (iMouseY div TileHx2) * PatternSize   +   iWSHeight * (iMouseX div TileWx2) * PatternSize ;
-
-    if DjinnTileMapper.MapFormat < mfGBA then
-    begin
-      case dewidth of
-        1:
-          begin
-            WSMap[I]:= MT[0, 0];
-          end;
-        2, 4, 8, 16:
-          begin
-            if bSwapXY then
-            begin
-              for YY:= 0 to deheight - 1 do
-              begin
-                for XX:= 0 to dewidth - 1 do
-                begin
-                  WSMap[I]:= MT[YY, XX];
-                  Inc(I);
-                end;
-                Dec(I, dewidth);
-                Inc(I, iWSWidth);
-              end;
-            end
-            else
-            begin
-              for YY:= 0 to deheight - 1 do
-              begin
-                for XX:= 0 to dewidth - 1 do
-                begin
-                  WSMap[I]:= MT[YY, XX];
-                  Inc(I, iWSHeight);
-                end;
-                Dec(I, iWSHeight* dewidth);
-                Inc(I);
-              end;
-            end;
-          end;
-      end;
-    end
-    else
-    begin
-      case dewidth of
-      1:
-        begin
-          WSMap[I]:= MT[0, 0] shr 8;
-          WSMap[I + 1]:= MT[0, 0];
-        end;
-      2, 4, 8, 16:
-        begin
-          if bSwapXY then
-          begin
-            for YY:= 0 to deheight - 1 do
-            begin
-              for XX:= 0 to dewidth - 1 do
-              begin
-                WSMap[I]:= MT[YY, XX] shr 8;
-                WSMap[I]:= MT[YY, XX + 1];
-                Inc(I, 2);
-              end;
-              Dec(I, dewidth * 2);
-              Inc(I, iWSWidth * 2);
-            end;
-          end
-          else
-          begin
-            for YY:= 0 to deheight - 1 do
-            begin
-              for XX:= 0 to dewidth - 1 do
-              begin
-                WSMap[I]:= MT[YY, XX] shr 8;
-                WSMap[I]:= MT[YY, XX + 1];
-                Inc(I, iWSHeight * 2);
-              end;
-              Dec(I, iWSHeight* dewidth * 2);
-              Inc(I, 2);
-            end;
-          end;
-        end;
-    end;
-    end;
-    DjinnTileMapper.DrawTile(dewidth, deheight);
-    DjinnTileMapper.DataMapDraw();
-  end;
-
-end;}
 
 procedure TWSForm.tbGridClick(Sender: TObject);
 begin
@@ -708,13 +512,13 @@ begin
 
     if Length(WSMap) <> W * H then
     begin
-      SetLength(Temp, Length(WSMap));
-      for I := Low(WSMap) to High(WSMap) do
-      begin
-        Temp[I]:=  WSMap[I].Value;
-        WSMap[I].Free;
-      end;
-      SetLength(WSMap, W * H);
+      //SetLength(Temp, Length(WSMap));
+//      for I := Low(WSMap) to High(WSMap) do
+//      begin
+//        Temp[I]:=  WSMap[I].Value;
+//        WSMap[I].Free;
+//      end;
+      SetSize(WSMap, W * H);
       I:= 0;
       if bSwapXY then
       begin
@@ -722,8 +526,7 @@ begin
         begin
           for X := 0 to W - 1 do
           begin
-            WSMap[I]:= TBlock.Create;
-            WSmap[I].Value:= Temp[I];
+ //           WSmap[I].Value:= Temp[I];
             WSMap[I].X:= X;
             WSMap[I].Y:= Y;
             WSMap[I].Address:= Y * W * PatternSize + X * PatternSize;
@@ -737,8 +540,7 @@ begin
         begin
           for X := 0 to W - 1 do
           begin
-            WSMap[I]:= TBlock.Create;
-            WSmap[I].Value:= Temp[I];
+//            WSmap[I].Value:= Temp[I];
             WSMap[I].X:= Y;
             WSMap[I].Y:= X;
             WSMap[I].Address:= X * H * PatternSize + Y * PatternSize;
@@ -799,7 +601,6 @@ begin
           format is being copied the call isn't necessary }
         ClipBoard.Open;
         Clipboard.Clear;
-        //Bitmap.SaveToClipboardFormat(MyFormat, AData, APalette);
         try
           // First copy the data as its custom format
           ClipBoard.SetAsHandle(CF_DTMDATA, Data);
@@ -861,14 +662,14 @@ begin
         // Obtain the size of the data to retrieve
         BlockCounts:= GlobalSize(Data) div SizeOf(Word);
         // Copy the data to the TDataRec field
+//        for I := Low(SelectTiles) to High(SelectTiles) do
+//        begin
+//          SelectTiles[I].Free;
+//        end;
+        SetSize(SelectTiles, BlockCounts);
         for I := Low(SelectTiles) to High(SelectTiles) do
         begin
-          SelectTiles[I].Free;
-        end;
-        SetLength(SelectTiles, BlockCounts);
-        for I := Low(SelectTiles) to High(SelectTiles) do
-        begin
-          SelectTiles[I]:= TBlock.Create;
+          //SelectTiles[I]:= TBlock.Create;
           SelectTiles[I].Value:= PWord(DataPtr)^;
           IncPointer(DataPtr, SizeOf(Word));
         end;

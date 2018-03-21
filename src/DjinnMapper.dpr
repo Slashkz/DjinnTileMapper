@@ -20,13 +20,16 @@ uses
   HexUnit in 'HexUnit.pas',
   MyClasses in 'MyClasses.pas',
   NodeLst in 'NodeLst.pas',
-  MetaTiles in 'MetaTiles.pas' {f_metatiles};
+  MetaTiles in 'MetaTiles.pas' {f_metatiles},
+  CFunctions in 'CFunctions.pas',
+  BookmarkInputForm in 'BookmarkInputForm.pas' {f_bookmark},
+  About in 'About.pas' {AboutForm};
 
 {$R *.res}
 
 begin
   Application.Initialize;
-  Application.Title := 'Tile Map Editor v1.0';
+  Application.Title := 'Djinn Tile Mapper v 2.0';
   Application.CreateForm(TDjinnTileMapper, DTM);
   Application.CreateForm(TInputForm, InputForm);
   Application.CreateForm(TSearchForm, SearchForm);
@@ -38,5 +41,7 @@ begin
   Application.CreateForm(TPalForm, PalForm);
   Application.CreateForm(TWSForm, WSForm);
   Application.CreateForm(Tf_metatiles, f_metatiles);
+  Application.CreateForm(Tf_bookmark, f_bookmark);
+  Application.CreateForm(TAboutForm, AboutForm);
   Application.Run;
 end.

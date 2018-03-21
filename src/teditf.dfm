@@ -563,6 +563,7 @@ object teditform: Tteditform
       Left = 0
       Top = 66
       Caption = 'tbPen'
+      Down = True
       Enabled = False
       Grouped = True
       ImageIndex = 47

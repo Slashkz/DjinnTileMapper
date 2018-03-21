@@ -6,7 +6,7 @@ object dataform: Tdataform
   BorderIcons = [biSystemMenu, biMinimize]
   Caption = #1058#1077#1082#1089#1090', '#1082#1086#1076' '#1080' '#1087#1088#1086#1095#1080#1081' '#1084#1091#1089#1086#1088
   ClientHeight = 575
-  ClientWidth = 544
+  ClientWidth = 547
   Color = clBtnFace
   Font.Charset = DEFAULT_CHARSET
   Font.Color = clWindowText
@@ -21,25 +21,27 @@ object dataform: Tdataform
   object spl1: TSplitter
     Left = 0
     Top = 58
-    Width = 544
+    Width = 547
     Height = 3
     Cursor = crVSplit
     Align = alTop
+    ExplicitWidth = 544
   end
   object otherpan: TPanel
     Left = 0
     Top = 0
-    Width = 544
+    Width = 547
     Height = 58
     Align = alTop
     BevelOuter = bvNone
     DragKind = dkDock
     FullRepaint = False
     TabOrder = 0
+    ExplicitWidth = 544
     object tlb1: TToolBar
       Left = 0
       Top = 0
-      Width = 544
+      Width = 547
       Height = 29
       Caption = 'tlb1'
       Color = clBtnFace
@@ -50,6 +52,7 @@ object dataform: Tdataform
       TabOrder = 0
       Transparent = True
       Wrapable = False
+      ExplicitWidth = 544
       object dLeftBtn: TSpeedButton
         Left = 0
         Top = 0
@@ -338,7 +341,7 @@ object dataform: Tdataform
     object tlb2: TToolBar
       Left = 0
       Top = 29
-      Width = 544
+      Width = 547
       Height = 29
       Color = clBtnFace
       DisabledImages = DjinnTileMapper.ToolbarDisabled
@@ -347,6 +350,7 @@ object dataform: Tdataform
       Images = DjinnTileMapper.ToolBarCold
       ParentColor = False
       TabOrder = 1
+      ExplicitWidth = 615
       object SwapXY: TSpeedButton
         Left = 0
         Top = 0
@@ -364,15 +368,8 @@ object dataform: Tdataform
         ParentFont = False
         OnClick = SwapXYClick
       end
-      object btn1: TToolButton
-        Left = 49
-        Top = 0
-        Width = 8
-        Caption = 'btn1'
-        Style = tbsDivider
-      end
       object cbNone: TSpeedButton
-        Left = 57
+        Left = 49
         Top = 0
         Width = 40
         Height = 22
@@ -382,7 +379,7 @@ object dataform: Tdataform
         OnClick = cbNoneClick
       end
       object Draw: TSpeedButton
-        Left = 97
+        Left = 89
         Top = 0
         Width = 40
         Height = 22
@@ -391,7 +388,7 @@ object dataform: Tdataform
         OnClick = DrawClick
       end
       object Step: TSpeedButton
-        Left = 137
+        Left = 129
         Top = 0
         Width = 40
         Height = 22
@@ -400,7 +397,7 @@ object dataform: Tdataform
         OnClick = StepClick
       end
       object sbType: TSpeedButton
-        Left = 177
+        Left = 169
         Top = 0
         Width = 40
         Height = 22
@@ -408,16 +405,8 @@ object dataform: Tdataform
         Caption = 'TYPE'
         OnClick = sbTypeClick
       end
-      object ToolButton1: TToolButton
-        Left = 217
-        Top = 0
-        Width = 8
-        Caption = 'ToolButton1'
-        ImageIndex = 0
-        Style = tbsSeparator
-      end
       object DataMapGrid: TSpeedButton
-        Left = 225
+        Left = 209
         Top = 0
         Width = 23
         Height = 22
@@ -460,7 +449,7 @@ object dataform: Tdataform
         OnClick = DataMapGridClick
       end
       object Prt: TSpeedButton
-        Left = 248
+        Left = 232
         Top = 0
         Width = 23
         Height = 22
@@ -471,29 +460,29 @@ object dataform: Tdataform
         OnClick = PrtClick
       end
       object FlipY: TSpeedButton
-        Left = 271
+        Left = 255
         Top = 0
         Width = 23
         Height = 22
         AllowAllUp = True
-        GroupIndex = 4
+        GroupIndex = 8
         Caption = 'V'
         Enabled = False
         OnClick = FlipYClick
       end
       object FlipX: TSpeedButton
-        Left = 294
+        Left = 278
         Top = 0
         Width = 23
         Height = 22
         AllowAllUp = True
-        GroupIndex = 3
+        GroupIndex = 9
         Caption = 'H'
         Enabled = False
         OnClick = FlipXClick
       end
       object PalBox: TComboBox
-        Left = 317
+        Left = 301
         Top = 0
         Width = 84
         Height = 21
@@ -503,7 +492,7 @@ object dataform: Tdataform
         OnChange = PalBoxChange
       end
       object btn2: TToolButton
-        Left = 401
+        Left = 385
         Top = 0
         Width = 8
         Caption = 'btn2'
@@ -511,7 +500,7 @@ object dataform: Tdataform
         Style = tbsSeparator
       end
       object tbShowHexNums: TToolButton
-        Left = 409
+        Left = 393
         Top = 0
         Enabled = False
         ImageIndex = 70
@@ -519,7 +508,7 @@ object dataform: Tdataform
         OnClick = tbShowHexNumsClick
       end
       object tbShowGameMode: TToolButton
-        Left = 432
+        Left = 416
         Top = 0
         Caption = 'ShowTrueImage'
         Enabled = False
@@ -528,14 +517,14 @@ object dataform: Tdataform
         OnClick = tbShowGameModeClick
       end
       object tbOpenMap: TToolButton
-        Left = 455
+        Left = 439
         Top = 0
         Caption = 'tbOpenMap'
         ImageIndex = 62
         OnClick = tbOpenMapClick
       end
       object tbSaveMap: TToolButton
-        Left = 478
+        Left = 462
         Top = 0
         Caption = 'tbSaveMap'
         Enabled = False
@@ -543,25 +532,35 @@ object dataform: Tdataform
         OnClick = tbSaveMapClick
       end
       object tbSelectTiles: TToolButton
-        Left = 501
+        Left = 485
         Top = 0
         Caption = 'SelectTiles'
+        Enabled = False
         ImageIndex = 79
         Style = tbsCheck
         OnClick = tbSelectTilesClick
+      end
+      object tbJumpList: TToolButton
+        Left = 508
+        Top = 0
+        Caption = 'tbJumpList'
+        DropdownMenu = pmJumpList
+        Enabled = False
+        ImageIndex = 73
       end
     end
   end
   object Panel1: TPanel
     Left = 0
     Top = 61
-    Width = 544
+    Width = 547
     Height = 495
     Align = alClient
     BevelOuter = bvLowered
     TabOrder = 1
+    ExplicitWidth = 544
     object DataScroll: TScrollBar
-      Left = 522
+      Left = 525
       Top = 1
       Width = 21
       Height = 493
@@ -573,16 +572,18 @@ object dataform: Tdataform
       SmallChange = 32
       TabOrder = 0
       OnChange = DataScrollChange
+      ExplicitLeft = 522
     end
     object scrlbx1: TScrollBox
       Left = 1
       Top = 1
-      Width = 521
+      Width = 524
       Height = 493
       HorzScrollBar.Increment = 16
       VertScrollBar.Increment = 16
       Align = alClient
       TabOrder = 1
+      ExplicitWidth = 521
       object DataMap: TImage
         Left = 0
         Top = 0
@@ -641,7 +642,7 @@ object dataform: Tdataform
   object stat1: TStatusBar
     Left = 0
     Top = 556
-    Width = 544
+    Width = 547
     Height = 19
     Panels = <
       item
@@ -666,6 +667,7 @@ object dataform: Tdataform
       item
         Width = 50
       end>
+    ExplicitWidth = 544
   end
   object ActionList1: TActionList
     Left = 457
@@ -686,6 +688,18 @@ object dataform: Tdataform
       Caption = 'BlockSelectAll'
       ShortCut = 16449
       OnExecute = BlockSelectAllExecute
+    end
+    object AddressJumpList: TAction
+      Caption = 'AddressJumpList'
+      OnExecute = AddressJumpListExecute
+    end
+  end
+  object pmJumpList: TPopupMenu
+    Left = 401
+    Top = 166
+    object AddBookmark: TMenuItem
+      Caption = #1044#1086#1073#1072#1074#1080#1090#1100' '#1079#1072#1082#1083#1072#1076#1082#1091
+      OnClick = AddBookmarkClick
     end
   end
 end

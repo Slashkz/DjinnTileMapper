@@ -53,7 +53,7 @@ type
 var
   f_metatiles: Tf_metatiles;
   //Data: array of Byte;
-  Map: array of TBlock;
+  Map: BlockArr;
   MapFormat: TMapFormat = mfMSX;
   MapWidth, MapHeight, MTWidth, MTHeight, DataPosition: Integer;
 
@@ -134,11 +134,11 @@ begin
   begin
     W:= MapWidth;
     H:= MapHeight;
-    for I := Low(Map) to High(Map) do
-    begin
-      Map[I].Free;
-    end;
-    SetLength(Map, MapWidth * MapHeight * MTWidth * MTHeight);
+//    for I := Low(Map) to High(Map) do
+//    begin
+//      Map[I].Free;
+//    end;
+    SetSize(Map, MapWidth * MapHeight * MTWidth * MTHeight);
     BitReader.Seek(DataPosition * 8, soBeginning);
     I:= 0;
     if cbDirection.ItemIndex = 0 then
@@ -151,7 +151,7 @@ begin
           begin
             for XX:= 0 to WW - 1 do
             begin
-              Map[I]:= TBlock.Create;
+              //Map[I]:= TBlock.Create;
               Map[I].Address:= BitReader.Position div 8;
               case MapFormat of
                 mfSingleByte, mfGBC:
@@ -179,7 +179,7 @@ begin
           begin
             for YY:= 0 to HH-1 do
             begin
-              Map[I]:= TBlock.Create;
+              //Map[I]:= TBlock.Create;
               Map[I].Address:= BitReader.Position div 8;
               case MapFormat of
                 mfSingleByte, mfGBC:
@@ -247,7 +247,9 @@ begin
   begin
     for I := Low(Map) to (Length(Map) div MTWidth div MTHeight) - 1 do
     begin
-      DTM.hexnums3.Draw(MapImage.Picture.Bitmap.Canvas, Map[I * MTWidth * MTHeight].x * TileWx2, Map[I * MTWidth * MTHeight].y * TileHx2, I and $7FF, True);
+      DTM.HexNums.Draw(MapImage.Picture.Bitmap.Canvas, Map[I * MTWidth * MTHeight].x * TileWx2, Map[I * MTWidth * MTHeight].y * TileHx2, (I shr 8) and 15, True);
+      DTM.HexNums.Draw(MapImage.Picture.Bitmap.Canvas, Map[I * MTWidth * MTHeight].x * TileWx2 + 5, Map[I * MTWidth * MTHeight].y * TileHx2, (I shr 4) and 15, True);
+      DTM.HexNums.Draw(MapImage.Picture.Bitmap.Canvas, Map[I * MTWidth * MTHeight].x * TileWx2 + 10, Map[I * MTWidth * MTHeight].y * TileHx2, I and 15, True);
     end;
 
   end;

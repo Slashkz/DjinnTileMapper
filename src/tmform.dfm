@@ -4,7 +4,7 @@ object tilemapform: Ttilemapform
   BorderIcons = [biSystemMenu, biMinimize]
   BorderWidth = 2
   Caption = #1050#1072#1088#1090#1072' '#1090#1072#1081#1083#1086#1074
-  ClientHeight = 353
+  ClientHeight = 358
   ClientWidth = 319
   Color = clBtnFace
   UseDockManager = True
@@ -22,7 +22,7 @@ object tilemapform: Ttilemapform
     Left = 302
     Top = 25
     Width = 17
-    Height = 260
+    Height = 265
     Align = alRight
     Enabled = False
     Kind = sbVertical
@@ -32,19 +32,19 @@ object tilemapform: Ttilemapform
     ShowHint = False
     TabOrder = 0
     OnChange = TMapScrollChange
-    ExplicitLeft = 297
+    ExplicitHeight = 260
   end
   object scrlbx: TScrollBox
     Left = 0
     Top = 25
     Width = 279
-    Height = 260
+    Height = 265
     HorzScrollBar.Increment = 16
     VertScrollBar.Increment = 16
     VertScrollBar.Style = ssHotTrack
     Align = alClient
     TabOrder = 1
-    ExplicitWidth = 274
+    ExplicitHeight = 260
     object TileMap: TImage
       Left = 0
       Top = 0
@@ -92,12 +92,12 @@ object tilemapform: Ttilemapform
   end
   object pnl1: TPanel
     Left = 0
-    Top = 285
+    Top = 290
     Width = 319
     Height = 49
     Align = alBottom
     TabOrder = 2
-    ExplicitWidth = 314
+    ExplicitTop = 285
     object grp1: TGroupBox
       Left = 183
       Top = -1
@@ -204,7 +204,6 @@ object tilemapform: Ttilemapform
     Height = 25
     Align = alTop
     TabOrder = 3
-    ExplicitWidth = 314
     object tlb1: TToolBar
       Left = 1
       Top = 1
@@ -215,7 +214,6 @@ object tilemapform: Ttilemapform
       HotImages = DjinnTileMapper.ToolBarHot
       Images = DjinnTileMapper.ToolBarCold
       TabOrder = 0
-      ExplicitWidth = 312
       object tbShowHex: TToolButton
         Left = 0
         Top = 0
@@ -302,7 +300,7 @@ object tilemapform: Ttilemapform
         Left = 192
         Top = 0
         Width = 105
-        Height = 21
+        Height = 22
         TabOrder = 1
         Text = '2BPP NES'
         OnChange = CodecboxChange
@@ -328,7 +326,7 @@ object tilemapform: Ttilemapform
   end
   object stat1: TStatusBar
     Left = 0
-    Top = 334
+    Top = 339
     Width = 319
     Height = 19
     Panels = <
@@ -341,13 +339,13 @@ object tilemapform: Ttilemapform
         Text = #1058#1072#1081#1083' : '
         Width = 50
       end>
-    ExplicitWidth = 314
+    ExplicitTop = 334
   end
   object tlb2: TToolBar
     Left = 279
     Top = 25
     Width = 23
-    Height = 260
+    Height = 265
     Align = alRight
     AutoSize = True
     Caption = 'tlb2'
@@ -361,7 +359,7 @@ object tilemapform: Ttilemapform
     ShowHint = True
     TabOrder = 5
     Transparent = False
-    ExplicitLeft = 274
+    ExplicitHeight = 260
     object tbBOF: TToolButton
       Left = 0
       Top = 0
@@ -468,7 +466,32 @@ object tilemapform: Ttilemapform
       Caption = '00'
       Enabled = False
       ImageIndex = 35
+      Wrap = True
       OnClick = tbGoToClick
+    end
+    object tbAddBookmark: TToolButton
+      Left = 0
+      Top = 242
+      Caption = 'tbAddBookmark'
+      DropdownMenu = pmJumpList
+      Enabled = False
+      ImageIndex = 73
+    end
+  end
+  object pmJumpList: TPopupMenu
+    Left = 208
+    Top = 161
+    object AddBookmark: TMenuItem
+      Caption = #1044#1086#1073#1072#1074#1080#1090#1100' '#1079#1072#1082#1083#1072#1076#1082#1091
+      OnClick = AddBookmarkClick
+    end
+  end
+  object actlst1: TActionList
+    Left = 216
+    Top = 233
+    object ActionAddressJumpList: TAction
+      Caption = 'ActionAddressJumpList'
+      OnExecute = ActionAddressJumpListExecute
     end
   end
 end

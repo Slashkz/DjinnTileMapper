@@ -6,7 +6,7 @@ uses
   Windows, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms,
   Dialogs, ExtCtrls, Menus, ColorGrd, StdCtrls, ComCtrls, Gauges, ToolWin,
   ImgList, Buttons, Spin, InputBox, ActnList, BitmapUtils, StdActns, Math,
-  RTLConsts, System.ImageList, System.Actions;
+  RTLConsts, System.ImageList, System.Actions, About;
 
 type
   TTile2bit = array[0..7, 0..1] of Byte;
@@ -31,13 +31,13 @@ const
 type
   TBlock = class
   private
-    FH: Boolean;
-    FPal: Byte;
-    FIndex: Word;
-    FValue: Word;
-    FAddress: LongWord;
-    FP: Boolean;
-    FV: Boolean;
+    FH: Boolean;//eax + 4
+    FPal: Byte; //eax + 5
+    FIndex: Word; //eax + 6
+    FValue: Word; //eax + 8
+    FAddress: LongWord; //eax + $0C
+    FP: Boolean;       //eax + $10
+    FV: Boolean;       //eax + $11
     procedure SetAddress(const Value: LongWord);
     procedure SetH(const Value: Boolean);
     procedure SetIndex(const Value: Word);
@@ -46,8 +46,8 @@ type
     procedure SetV(const Value: Boolean);
     procedure SetValue(const Value: Word);
   public
-    X: Integer;
-    Y: Integer;
+    X: Integer; //eax + $14
+    Y: Integer; //eax + $18
     property Value: Word read FValue write SetValue;
     property Index: Word read FIndex write SetIndex;
     property H: Boolean read FH write SetH;
@@ -63,7 +63,6 @@ type
     Data: array of TBlock;
     Bitmap: TBitmap;
   end;
-
 
   TBitReader = class
   private
@@ -194,7 +193,7 @@ type
     ToolBarHot: TImageList;
     ToolbarDisabled: TImageList;
     ShowMetatilesMap: TMenuItem;
-    hexnums3: TImageList;
+    HexNums: TImageList;
     procedure FormShow(Sender: TObject);
     procedure ExitItemClick(Sender: TObject);
     procedure Fill(var Im: TImage; Clr: TColor);
@@ -246,6 +245,7 @@ type
     procedure N29Click(Sender: TObject);
     procedure ShowWorkSpaceClick(Sender: TObject);
     procedure ShowMetatilesMapClick(Sender: TObject);
+    procedure AboutItemClick(Sender: TObject);
   private
     FMapFormat: TMapFormat;
     FPalette: array[Byte] of TColor;
@@ -320,14 +320,15 @@ type
   PromData = ^TromData;
   TRomData = array[0..10 * 1024 * 1024] of Byte;
 
-//  PBlockData = ^TBlockData;
-//  TBlockData = array[0..10 * 1024 * 1024] of TBlock;
   TTable = array[Byte] of string;
 
   TTileTable = array[Byte] of Byte;
 
-function HexVal(s: string; var err: Boolean): LongInt;
-procedure IncPointer(var p: Pointer; increment: Integer);
+  BlockArr = array of TBlock;
+
+  function HexVal(s: string; var err: Boolean): LongInt;
+  procedure IncPointer(var p: Pointer; increment: Integer);
+  procedure SetSize(var P: BlockArr; Size: Integer);
 
 const
   Hchs: TCharset = ['H', 'h', '0'..'9', 'A'..'F', 'a'..'f', #8];
@@ -343,10 +344,10 @@ const
   PALETTE_WIDTH = COLOR_WIDTH * 16;
   PALETTE_HEIGHT = COLOR_HEIGHT * 16;
   COLOR_NUMBERS = 256;
+  MAX_TILES_NUMS = 2048;
  //Capt: String; = Application.Title;//'Djinn Tile Mapper v1.4.9.9-beta';
   Ss: array[Boolean] of string[1] = ('*', '');
   BSZ: array[TTileType] of Byte = (1, 2, 2, 2, 2, 2, 3, 3, 4, 4, 4, 4, 4, 8, 8);
-  MAX_TILES_NUMS = 2048;
   CLR_CNT: array[TTileType] of Integer = (2, 4, 4, 4, 4, 4, 8, 8, 16, 16, 16, 16, 16, 256, 256);
 var
   perenos, endt: byte;
@@ -365,12 +366,13 @@ var
   tewidth, teheight: Integer;
   dewidth, deheight: Integer;
   OldRomSize: Integer;
-  Data: array of TBlock; //Буфер для данных
   MapXY: array[0..2047] of TPoint;
   Map: array[0..127, 0..15] of Word;
   TileMap: array[0..15, 0..15] of Word;
   TileMapXY: array[0..15, 0..15] of TPoint;
-  SelectTiles: array of TBlock; //Времменный буфер для выделенных тайлов
+  SelectTiles: BlockArr; //Времменный буфер для выделенных тайлов
+  WSMap: BlockArr;
+  Data: BlockArr; //Буфер для данных
   FCol, BCol: Byte;
   ROM: file;
   fname: string;
@@ -404,7 +406,6 @@ var
   PatternSize: Byte;
   iTMWidth, iTMHeight: Byte; // Tile Map Sizes
   iWSWidth, iWSHeight: Byte; //Work Space Sizes
-  WSMap: array of TBlock;
   bWorkSpace: Boolean = False;
   bWorkSpaceGrid: Boolean = False;
   iWSPos: Integer;
@@ -423,7 +424,7 @@ var
   bTileMapChanged: Boolean = False;
   RBts: LongInt;
   CF_DTMDATA: Word; //Собственный формат для буфера обмена
-  PalSet: Byte = 0;
+  JumpList: TStringList;
 implementation
 
 uses
@@ -432,12 +433,58 @@ uses
 
 {$R *.dfm}
 
-procedure IncPointer(var p: Pointer; increment: Integer);
+procedure IncPointer(var P: Pointer; Increment: Integer);
 begin
-  p := Pointer(LongWord(p) + Increment);
+  P := Pointer(LongWord(P) + Increment);
 end;
 
-procedure GameModeShow(P: array of TBlock; B: TBITMAP; Width, Height: Integer);
+
+
+{-------------------------------------------------------------------------------
+  Процедура: SetSize
+  Автор:    Marat
+  Дата:  2018.03.21
+  Входные параметры: P: array of TBlock; Size: Integer
+  Результат:    Нет
+  Процедура изменяет размер динамического массива и удаляет либо создаёт новые
+  объекты
+-------------------------------------------------------------------------------}
+procedure SetSize(var P: BlockArr; Size: Integer);
+var
+  I: Integer;
+  OldSize: Integer;
+begin
+  OldSize:= Length(P);
+  if Size > OldSize then
+  begin
+    SetLength(P, Size);
+    for I := OldSize to Size - 1 do
+    begin
+      P[I]:= TBlock.Create;
+    end;
+  end
+  else
+  if Size < OldSize then
+  begin
+    for I := Size to OldSize - 1 do
+    begin
+      P[I].Free;
+    end;
+    SetLength(P, Size);
+  end;
+end;
+
+
+
+{-------------------------------------------------------------------------------
+  Процедура: GameModeShow
+  Автор:    Marat
+  Дата:  2018.03.21
+  Входные параметры: P: BlockArr; B: TBITMAP; Width, Height: Integer
+  Результат:    Нет
+  Отрисовывает изображение в полноцветном режиме
+-------------------------------------------------------------------------------}
+procedure GameModeShow(P: BlockArr; B: TBITMAP; Width, Height: Integer);
 var
   MapImage: TMapImage;
   Stream: TStream;
@@ -476,7 +523,7 @@ begin
             mfMSX:
               begin
                 Value:= Swap(P[I * Width + J].Value);
-                Stream.WriteBuffer(P[I * Width + J].Value, 2);
+                Stream.WriteBuffer(Value, 2);
               end;
           end;
         end;
@@ -504,8 +551,8 @@ begin
               end;
             mfMSX:
               begin
-                Value:= Swap(P[I * Width + J].Value);
-                Stream.WriteBuffer(P[J * Height + I].Value, 2);
+                Value:= Swap(P[J * Height + I].Value);
+                Stream.WriteBuffer(Value, 2);
               end;
           end;
         end;
@@ -550,7 +597,7 @@ end;
 
 procedure TDjinnTileMapper.DataMapDraw;
 var
-  P: array of TBlock;
+  P: BlockArr;
   xx, I, J, Index, yy: integer;
   Tile: Word;
   bbb, tilebmp: TBitmap;
@@ -572,8 +619,7 @@ begin
     bbb.Height := dataform.datamap.Height;
     Width := dWidth;
     Height := dHeight;
-    SetLength(P, Length(Data));
-    Move(Data[0], P[0], Length(P) * SizeOf(TBlock));
+    P:= Data;
   end
   else
   begin
@@ -581,8 +627,7 @@ begin
     bbb.Height := WSForm.WorkSpace.Height;
     Width := iWSWidth;
     Height := iWSHeight;
-    SetLength(P, Length(WSMap));
-    Move(WSMap[0], P[0], Length(P) * SizeOf(TBlock));
+    P:= WSMap;
   end;
 
   bbb.Canvas.Font.Color := $D0D0D0;
@@ -660,11 +705,40 @@ begin
   begin
     for I := Low(Data) to High(Data) do
     begin
-      hexnums3.Draw(dataform.DataMap.Picture.Bitmap.Canvas, Data[I].x * TileWx2, Data[I].y * TileHx2, Data[I].Index and $7FF, True);
+      HexNums.Draw(dataform.DataMap.Picture.Bitmap.Canvas, Data[I].x * TileWx2, Data[I].y * TileHx2, Data[I].Index and $7FF, True);
+      case DTM.MapFormat of
+        mfSingleByte, mfGBC:
+          begin
+            HexNums.Draw(dataform.DataMap.Picture.Bitmap.Canvas, Data[I].x * TileWx2, Data[I].y * TileHx2, (Data[I].Index shr 4) and 15, True);
+            HexNums.Draw(dataform.DataMap.Picture.Bitmap.Canvas, Data[I].x * TileWx2 + 5, Data[I].y * TileHx2, Data[I].Index and 15, True);
+
+          end;
+        mfSMS:
+          begin
+            HexNums.Draw(dataform.DataMap.Picture.Bitmap.Canvas, Data[I].x * TileWx2, Data[I].y * TileHx2, (Data[I].Index shr 8) and 15, True);
+            HexNums.Draw(dataform.DataMap.Picture.Bitmap.Canvas, Data[I].x * TileWx2 + 5, Data[I].y * TileHx2, (Data[I].Index shr 4) and 15, True);
+            HexNums.Draw(dataform.DataMap.Picture.Bitmap.Canvas, Data[I].x * TileWx2 + 10, Data[I].y * TileHx2, Data[I].Index and 15, True);
+          end;
+        mfGBA, mfSNES:
+          begin
+            HexNums.Draw(dataform.DataMap.Picture.Bitmap.Canvas, Data[I].x * TileWx2, Data[I].y * TileHx2, (Data[I].Index shr 8) and 15, True);
+            HexNums.Draw(dataform.DataMap.Picture.Bitmap.Canvas, Data[I].x * TileWx2 + 5, Data[I].y * TileHx2, (Data[I].Index shr 4) and 15, True);
+            HexNums.Draw(dataform.DataMap.Picture.Bitmap.Canvas, Data[I].x * TileWx2 + 10, Data[I].y * TileHx2, Data[I].Index and 15, True);
+
+          end;
+        mfMSX, mfPCE:
+          begin
+            HexNums.Draw(dataform.DataMap.Picture.Bitmap.Canvas, Data[I].x * TileWx2, Data[I].y * TileHx2, (Data[I].Index shr 8) and 15, True);
+            HexNums.Draw(dataform.DataMap.Picture.Bitmap.Canvas, Data[I].x * TileWx2 + 5, Data[I].y * TileHx2, (Data[I].Index shr 4) and 15, True);
+            HexNums.Draw(dataform.DataMap.Picture.Bitmap.Canvas, Data[I].x * TileWx2 + 10, Data[I].y * TileHx2, Data[I].Index and 15, True);
+
+          end;
+      end;
+
     end;
 
+
   end;
-   //Dataform.stat1.Panels.Items[3].Text:= IntToStr(GetTickCount - StartTick) + ' ms';
 end;
 
 procedure TDjinnTileMapper.DrawTile(WW, HH: Integer);
@@ -768,27 +842,8 @@ begin
 end;
 
 procedure TDjinnTileMapper.SetColor(I: Integer; const Value: TColor);
-//var
-//  X, Y: Integer;
 begin
   FPalette[I]:= Value;
-//  with PalForm.PalImage.Picture.Bitmap.Canvas do
-//  begin
-//    X := I mod 16;
-//    Y := I div 16;
-//    Brush.Color := Value;
-//    FillRect(Bounds(X * 17, Y * 17, 17, 17));
-//    Brush.Color := clWhite;
-//
-////    if (I = fcol) and (I = BCol) then
-////      TextOut(X * 17, Y * 17, 'BF')
-////    else
-////    if I = fcol then
-////      TextOut(X * 17 + 2, Y * 17, 'F')
-////    else
-////    if I = bcol then
-////      TextOut(X * 17 + 2, Y * 17, 'B');
-//  end;
 end;
 
 procedure TDjinnTileMapper.SetCurBank(n: integer);
@@ -852,15 +907,6 @@ begin
             bmap.Canvas.Pixels[X * tilew + XX, Y * tileh + YY] := Color[Col];
           end;
         end;
-        //BitReader.Free;
-//        for YY:= 0 to tileh - 1 do
-//        begin
-//          for XX:= 0 to tilew - 1 do
-//          begin
-//            Color:= (ROMData^[TilePos + ((YY * tilew + XX)  div 8)] shr (7 - ((YY * tilew + XX)  mod 8))) and 1;
-//            bmap.Canvas.Pixels[X * tilew + XX, Y * tileh + YY]:=  colors[Color + 1];
-//          end;
-//        end;
       end;
     tt2bitMSX:
       begin
@@ -942,17 +988,6 @@ begin
             bmap.Canvas.Pixels[X * tilew + XX, Y * tileh + YY] := Color[Col];
           end;
         end;
-        {Move(ROMData^[TilePos], Tile2bitNES, SizeOf(TTile2bit_NES));
-        for YY:= 0 to 7 do
-        begin
-          Src1:=   Tile2bitNES[0, YY];
-          Src2:=   Tile2bitNES[1, YY];
-          for XX:= 0 to 7 do
-          begin
-            Color:= ((Src1 and $80) shr 7) or (Src2 and $80) shr 6; Src1:= Src1 shl 1; Src2:= Src2 shl 1;
-            bmap.Canvas.Pixels[X * tilew + XX, Y * tileh + YY]:= Palette[Color];
-          end;
-        end; }
       end;
     tt3bitSNES:
       begin
@@ -1135,7 +1170,7 @@ begin
   bmap.Canvas.Brush.Color := clBlack;
   bmap.Canvas.FillRect(Rect(0, 0, bmap.Width, bmap.Height));
   bmap.Canvas.Brush.Style := bsClear;
-  RowCount := 128;
+  RowCount := MAX_TILES_NUMS div 16;
   if ((OldROMSize - DataPos) * 8) < (16 * 128 * bsz[TileType] * tilew * tileh) then
     RowCount := ((OldROMSize - DataPos) * 8) div (16 * tilew * tileh * bsz[TileType]);
 
@@ -1289,8 +1324,6 @@ begin
   dataform.dRightBtn.Enabled := True;
   dataform.HexEd.Enabled := true;
   dataform.HexEd.Color := clWindow;
-//  GridDraw(dataform.Grid.Picture.Bitmap, TileWx2, TileHx2, clHotLight);
-//  GridDraw(dataform.Grid.Picture.Bitmap, 8 * TileWx2, 8 * TileHx2, clSkyBlue);
 end;
 
 procedure TDjinnTileMapper.SetPos(P: LongInt);
@@ -1390,7 +1423,7 @@ end;
 
 procedure TDjinnTileMapper.FormShow(Sender: TObject);
 var
-  e: string; // uuu : file;
+  e: string;
   iHeight, I, N, X, Y: Integer;
 begin
   PatternSize := 2;
@@ -1434,7 +1467,6 @@ begin
   iTMWidth := 16;
   iTMHeight := 128;
   bTMShowHex := False;
-  TileMask := $7FF;
   MapFormat := mfMSX;
   tilew := 8;
   tileh := 8;
@@ -1485,10 +1517,6 @@ begin
   Fill(WSForm.WorkSpace, 0);
   tilemapform.ChangeMap(tlwidthv, tlheightv);
   TileMap[0, 0] := 0;
-//  Color1 := RGB(0, 0, 0);
-//  Color2 := RGB(160, 48, 0);
-//  Color3 := RGB(216, 73, 96);
-//  Color4 := RGB(255, 200, 184);
 
   for I := 0 to 63 do
   begin
@@ -1508,6 +1536,19 @@ begin
   dWidth := 32;
   dHeight := 30;
   SetLength(Data, dWidth * dHeight);
+  I:= 0;
+  for Y := 0 to dHeight - 1 do
+  begin
+    for X := 0 to dWidth - 1 do
+    begin
+      Data[I] := TBlock.Create;
+      Data[I].Value := 0;
+      Data[I].X := X;
+      Data[I].Y := Y;
+      Data[I].Address := I * PatternSize;
+      Inc(I);
+    end;
+  end;
   for I := 0 to 3 do
   begin
     dataform.PalBox.Items.Add('Палитра ' + IntToStr(I));
@@ -1529,16 +1570,27 @@ begin
     e := UpperCase(ExtractFileExt(FName));
     if e = '.NES' then
       tilemapform.codecBox.ItemIndex := Byte(tt2bitNES)
-    else if (e = '.GB') or (e = '.GBC') then
+    else
+    if (e = '.GB') or (e = '.GBC') then
       tilemapform.codecBox.ItemIndex := Byte(tt2bitGBC)
-    else if e = '.GBA' then
+    else
+    if e = '.GBA' then
       tilemapform.codecBox.ItemIndex := Byte(tt4bit)
-    else if (e = '.SMC') or (e = '.FIG') then
+    else
+    if (e = '.SMC') or (e = '.FIG') or (e = '.PCE') then
       tilemapform.codecBox.ItemIndex := Byte(tt4bitSNES)
-    else if (e = '.BIN') or (e = '.GEN') then
+    else
+    if (e = '.BIN') or (e = '.GEN') then
       tilemapform.codecBox.ItemIndex := Byte(tt4bitMSX)
-    else if (e = '.SMS') or (e = '.GG') then
+    else
+    if (e = '.SMS') or (e = '.GG') or (e = '.WSC') then
       tilemapform.codecBox.ItemIndex := Byte(tt4bitSMS)
+    else
+    if (e = '.VB') then
+      tilemapform.codecBox.ItemIndex := Byte(tt2bitVB)
+    else
+    if (e = '.NGC') then
+      tilemapform.codecBox.ItemIndex := Byte(tt2bitNGP)
     else
       tilemapform.codecBox.ItemIndex := Byte(tt2bitNES);
     TileType := TTileType(tilemapform.codecBox.ItemIndex);
@@ -1553,7 +1605,8 @@ end;
 
 procedure TDjinnTileMapper.ROMopen;
 var
-  MinSize: Integer;
+  MinSize, I: Integer;
+  S: string;
 begin
   AssignFile(ROM, fname);
   Reset(ROM, 1);
@@ -1562,7 +1615,9 @@ begin
     FreeMem(ROMdata, ROMsize);
     BitReader.Free;
     BitWriter.Free;
+    JumpList.Free;
   end;
+  JumpList:= TStringList.Create;
   ROMsize := FileSize(ROM);
   dataform.stat1.Panels.Items[0].Text := 'Адрес : 000000 / ' + IntToHex(ROMSize, 6);
   TileMapForm.stat1.Panels.Items[0].Text := 'Адрес : 000000 / ' + IntToHex(ROMSize, 6);
@@ -1575,6 +1630,13 @@ begin
   BitWriter := TBitWriter.Create(ROMData[0], ROMSize);
   BlockRead(ROM, ROMData^, ROMSize, RBts);
   UpdateData(0);
+  S:= ExtractFileName(fname)  + '.jumplist';
+  if FileExists(S) then
+  begin
+    JumpList.LoadFromFile(S);
+    dataform.InitJumpList;
+    tilemapform.InitJumpList;
+  end;
   CloseFile(ROM);
   Saved := True;
   ROMopened := true;
@@ -1608,6 +1670,7 @@ begin
     tbOpenBitmap.Enabled:= True;
     tbSaveBitmap.Enabled:= True;
     tbPen.Enabled:= True;
+    tbPen.Down:= True;
     tbEditDropper.Enabled:= True;
     tbFiller.Enabled:= True;
     zoomx.Enabled:= True;
@@ -1629,6 +1692,8 @@ begin
     tbSaveMap.Enabled := True;
     tbShowHexNums.Enabled := True;
     tbShowGameMode.Enabled := True;
+    tbJumpList.Enabled:= True;
+    tbSelectTiles.Enabled:= True;
   end;
 
 
@@ -1641,6 +1706,7 @@ begin
     theight.Enabled := True;
     tlwidth.Enabled := True;
     tlheight.Enabled := True;
+    tbAddBookmark.Enabled:= True;
   end;
 
   with f_metatiles do
@@ -1668,16 +1734,27 @@ begin
     e := UpperCase(ExtractFileExt(FName));
     if e = '.NES' then
       tilemapform.codecBox.ItemIndex := Byte(tt2bitNES)
-    else if (e = '.GB') or (e = '.GBC') then
+    else
+    if (e = '.GB') or (e = '.GBC') then
       tilemapform.codecBox.ItemIndex := Byte(tt2bitGBC)
-    else if e = '.GBA' then
+    else
+    if e = '.GBA' then
       tilemapform.codecBox.ItemIndex := Byte(tt4bit)
-    else if (e = '.SMC') or (e = '.FIG') then
+    else
+    if (e = '.SMC') or (e = '.FIG') or (e = '.PCE') then
       tilemapform.codecBox.ItemIndex := Byte(tt4bitSNES)
-    else if (e = '.BIN') or (e = '.GEN') then
+    else
+    if (e = '.BIN') or (e = '.GEN') then
       tilemapform.codecBox.ItemIndex := Byte(tt4bitMSX)
-    else if (e = '.SMS') or (e = '.GG') then
+    else
+    if (e = '.SMS') or (e = '.GG') or (e = '.WSC') then
       tilemapform.codecBox.ItemIndex := Byte(tt4bitSMS)
+    else
+    if (e = '.VB') then
+      tilemapform.codecBox.ItemIndex := Byte(tt2bitVB)
+    else
+    if (e = '.NGC') then
+      tilemapform.codecBox.ItemIndex := Byte(tt2bitNGP)
     else
       tilemapform.codecBox.ItemIndex := Byte(tt2bitNES);
     TileType := TTileType(tilemapform.codecBox.ItemIndex);
@@ -1696,23 +1773,13 @@ begin
     BitReader.Free;
     BitWriter.Free;
     FreeMem(ROMdata, ROMsize);
+    JumpList.Free;
   end;
-  for I := Low(SelectTiles) to High(SelectTiles) do
-  begin
-    SelectTiles[I].Free;
-  end;
-  for I := Low(Data) to High(Data) do
-  begin
-    Data[I].Free;
-  end;
-  for I := Low(WSMap) to High(WSMap) do
-  begin
-    WSMap[I].Free;
-  end;
-  for I := Low(MetaTiles.Map) to High(MetaTiles.Map) do
-  begin
-    MetaTiles.Map[I].Free;
-  end;
+
+  SetSize(SelectTiles, 0);
+  SetSize(Data, 0);
+  SetSize(WSMap, 0);
+  SetSize(MetaTiles.Map, 0);
   bmap.free;
   btile.free;
 end;
@@ -2887,15 +2954,12 @@ var
   J: Integer;
 begin
   BitReader.Seek(Pos * 8, soBeginning);
-  for I := Low(Data) to High(Data) do
-    Data[I].Free;
-  SetLength(Data, DataH * DataW);
+  SetSize(Data, DataH * DataW);
   if bSwapXY then
   begin
     for I := 0 to DataH - 1 do
       for J := 0 to DataW - 1 do
       begin
-        Data[I * DataW + J] := TBlock.Create();
         with Data[I * DataW + J] do
         begin
           Address := BitReader.Position div 8;
@@ -2914,7 +2978,6 @@ begin
     for I := 0 to DataW - 1 do
       for J := 0 to DataH - 1 do
       begin
-        Data[I * DataH + J] := TBlock.Create();
         with Data[I * DataH + J] do
         begin
           Address := BitReader.Position div 8;
@@ -2945,8 +3008,35 @@ begin
     for Local_Y := 0 to RowCount - 1 do
       for Local_X := 0 to 16 - 1 do
       begin
-        DTM.hexnums3.Draw(TileMapForm.TileMap.Picture.Bitmap.Canvas, MapXY[I].x * TileWx2, MapXY[I].y * TileHx2, I and $7FF, True);
-        Inc(I);
+        case DTM.MapFormat of
+          mfSingleByte, mfGBC:
+            begin
+              DTM.HexNums.Draw(tilemapform.TileMap.Picture.Bitmap.Canvas, MapXY[I].X * TileWx2, MapXY[I].Y * TileHx2, ((I shr 4) and 15), True);
+              DTM.HexNums.Draw(tilemapform.TileMap.Picture.Bitmap.Canvas, MapXY[I].X * TileWx2 + 5, MapXY[I].Y * TileHx2, (I and 15), True);
+              I:= Succ(I) and $FF;
+            end;
+          mfSMS:
+            begin
+              DTM.HexNums.Draw(tilemapform.TileMap.Picture.Bitmap.Canvas, MapXY[I].X * TileWx2, MapXY[I].Y * TileHx2, (I shr 8) and 15, True);
+              DTM.HexNums.Draw(tilemapform.TileMap.Picture.Bitmap.Canvas, MapXY[I].X * TileWx2 + 5, MapXY[I].Y * TileHx2, ((I shr 4) and 15), True);
+              DTM.HexNums.Draw(tilemapform.TileMap.Picture.Bitmap.Canvas, MapXY[I].X * TileWx2 + 10, MapXY[I].Y * TileHx2, (I and 15), True);
+              I:= Succ(I) and $1FF;
+            end;
+          mfGBA, mfSNES:
+            begin
+              DTM.HexNums.Draw(tilemapform.TileMap.Picture.Bitmap.Canvas, MapXY[I].X * TileWx2, MapXY[I].Y * TileHx2, (I shr 8) and 15, True);
+              DTM.HexNums.Draw(tilemapform.TileMap.Picture.Bitmap.Canvas, MapXY[I].X * TileWx2 + 5, MapXY[I].Y * TileHx2, ((I shr 4) and 15), True);
+              DTM.HexNums.Draw(tilemapform.TileMap.Picture.Bitmap.Canvas, MapXY[I].X * TileWx2 + 10, MapXY[I].Y * TileHx2, (I and 15), True);
+              I:= Succ(I) and $3FF;
+            end;
+          mfMSX, mfPCE:
+            begin
+              DTM.HexNums.Draw(tilemapform.TileMap.Picture.Bitmap.Canvas, MapXY[I].X * TileWx2, MapXY[I].Y * TileHx2, (I shr 8) and 15, True);
+              DTM.HexNums.Draw(tilemapform.TileMap.Picture.Bitmap.Canvas, MapXY[I].X * TileWx2 + 5, MapXY[I].Y * TileHx2, ((I shr 4) and 15), True);
+              DTM.HexNums.Draw(tilemapform.TileMap.Picture.Bitmap.Canvas, MapXY[I].X * TileWx2 + 10, MapXY[I].Y * TileHx2, (I and 15), True);
+              I:= Succ(I) and $7FF;
+            end;
+        end;
       end;
   end;
 end;
@@ -3031,6 +3121,11 @@ Error:
 { ShowMessage('Неверный формат файла!!!');}
 EndProc:
 
+end;
+
+procedure TDjinnTileMapper.AboutItemClick(Sender: TObject);
+begin
+  AboutForm.Show;
 end;
 
 procedure TDjinnTileMapper.cttblClick(Sender: TObject);
@@ -3455,7 +3550,7 @@ end;
 procedure TDjinnTileMapper.N28Click(Sender: TObject);
 var
   b: byte;
-  i: longword;
+  I: longword;
 begin
   b := strtoint(InputForm.InputBx(Application.Title, 'Введите заполняющий байт', ['0'..'9', #13, #8], 3));
   if not InputForm.iokresult then
@@ -3608,7 +3703,8 @@ begin
     Position := 0;
     Result := False;
   end
-  else if Position >= Length then
+  else
+  if Position >= Length then
   begin
     Position := Length - 1;
     Result := False;
@@ -3662,15 +3758,11 @@ const
   SetBit: array[0..7] of Byte = ($1, $2, $4, $8, $10, $20, $40, $80);
 var
   I, J: Integer;
-  Bit: Boolean;
 begin
-  asm
-    mov Bit,dl;
-  end;
   I := Position div 8;
   J := Position mod 8;
   Position := Position + 1;
-  if Bit then
+  if Value = 1 then
     Source[I] := Source[I] or SetBit[7 - J]
   else
     Source[I] := Source[I] and ResetBit[7 - J];
@@ -3717,7 +3809,8 @@ begin
     Position := 0;
     Result := False;
   end
-  else if Position >= Length then
+  else
+  if Position >= Length then
   begin
     Position := Length - 1;
     Result := False;
@@ -3771,15 +3864,11 @@ const
   SetBit: array[0..7] of Byte = ($1, $2, $4, $8, $10, $20, $40, $80);
 var
   I, J: Integer;
-  Bit: Boolean;
 begin
-  asm
-    mov Bit,dl;
-  end;
   I := Position div 8;
   J := Position mod 8;
   Position := Position + 1;
-  if Bit then
+  if Value = 1 then
     dest[I] := dest[I] or SetBit[7 - J]
   else
     dest[I] := dest[I] and ResetBit[7 - J];
@@ -3898,8 +3987,15 @@ begin
   FValue := Value;
   case DTM.MapFormat of
     mfSingleByte:
+//      asm
+//        mov [eax].FH, 0;
+//        mov [eax].FV, 0;
+//        mov [eax].FP, 0;
+//        mov [eax].FPal, 0;
+//        and dx, $FF;
+//        mov [eax].FIndex, dx;
+//      end;
       begin
-        //
         FH := False;
         FV := False;
         FP := False;
@@ -3933,10 +4029,10 @@ begin
       end;
     mfMSX:
       begin
-        FP := (Value and $8000) = $8000;
-        FH := (Value and $800) = $800;
-        FV := (Value and $1000) = $1000;
-        FPal := (Value and $6000) shr 13;
+        FP := Boolean((Value shr 15) and 1);//(Value and $8000) = $8000;
+        FH := Boolean((Value shr 11) and 1);//(Value and $800) = $800;//
+        FV := Boolean((Value shr 12) and 1);//(Value and $1000) = $1000;//
+        FPal := (Value shr 13) and 3;//(Value and $6000) shr 13;
         FIndex := Value and $7FF;
       end;
     mfPCE:

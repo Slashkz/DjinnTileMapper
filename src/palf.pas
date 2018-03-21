@@ -45,11 +45,11 @@ procedure TPalForm.FormMouseDown(Sender: TObject; Button: TMouseButton;
   Shift: TShiftState; X, Y: Integer);
 var
   XX, YY, I, NewColor: Integer;
-  UpdateTileSet: Boolean;
+  OldPalset: Byte;
 begin
   if not ROMopened then
     Exit;
-  UpdateTileSet:= False;
+  OldPalset:= DTM.BigPalSet;
   DTM.BigPalSet:= Y div COLOR_HEIGHT + (PalImage.Top mod COLOR_HEIGHT);
   NewColor:= DTM.BigPalSet * 16 + (X div COLOR_WIDTH);
  If button = mbleft then
@@ -59,26 +59,18 @@ begin
    DTM.colordialog.Color := DTM.Palette[NewColor];
    If DTM.Colordialog.Execute then
    begin
-    DTM.Palette[PalSet * 16 + (X div 16)] := DTM.colordialog.Color;
+    DTM.Palette[DTM.BigPalSet * 16 + (X div 16)] := DTM.colordialog.Color;
     if ROMopened then DTM.DrawTileMap;
    end;
-  end;
-  if (DTM.Foreground div 16) <> (NewColor div 16) then
-  begin
-    UpdateTileSet:= True;
   end;
   DTM.Foreground := NewColor mod CLR_CNT[DTM.TileType];
  end
  Else
  begin
-  if (DTM.Background div 16) <>  (NewColor div 16) then
-  begin
-    UpdateTileSet:= True;
-  end;
   DTM.Background := NewColor mod CLR_CNT[DTM.TileType];
  end;
 
-  if UpdateTileSet then
+  if DTM.BigPalSet <> OldPalset then
   begin
     DTM.DrawTileMap();
     DTM.DrawTile(btile.Width div tilew, btile.Height div tileh);

@@ -277,7 +277,7 @@ object WSForm: TWSForm
       Left = 205
       Top = 0
       AllowAllUp = True
-      ImageIndex = 36
+      ImageIndex = 60
       OnClick = tbGridClick
     end
     object cbRectSize: TComboBox
@@ -300,7 +300,7 @@ object WSForm: TWSForm
       Left = 318
       Top = 0
       Caption = 'SelectionBlock'
-      ImageIndex = 60
+      ImageIndex = 79
       Style = tbsCheck
       OnClick = tbSelectTilesClick
     end

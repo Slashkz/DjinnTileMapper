@@ -8,7 +8,7 @@ uses
   ComCtrls,
   ToolWin,
   ImgList, System.ImageList, System.Actions, Vcl.ActnList, Clipbrd,
-  Vcl.StdActns;
+  Vcl.StdActns, Vcl.Menus;
 
 type
   Tdataform = class(TForm)
@@ -41,8 +41,6 @@ type
     Step: TSpeedButton;
     cbNone: TSpeedButton;
     cbMapFormat: TComboBox;
-    btn1: TToolButton;
-    ToolButton1: TToolButton;
     tbGoTo: TToolButton;
     sbUp: TSpeedButton;
     sbDown: TSpeedButton;
@@ -60,6 +58,10 @@ type
     BlockSelection: TShape;
     BlockCopy: TAction;
     BlockSelectAll: TAction;
+    tbJumpList: TToolButton;
+    pmJumpList: TPopupMenu;
+    AddBookmark: TMenuItem;
+    AddressJumpList: TAction;
     procedure dLeftBtnClick(Sender: TObject);
     procedure dRightBtnClick(Sender: TObject);
     procedure WidthEditChange(Sender: TObject);
@@ -112,10 +114,13 @@ type
     procedure EditPasteExecute(Sender: TObject);
     procedure BlockCopyExecute(Sender: TObject);
     procedure BlockSelectAllExecute(Sender: TObject);
+    procedure AddBookmarkClick(Sender: TObject);
+    procedure AddressJumpListExecute(Sender: TObject);
   private
     { Private declarations }
   public
     { Public declarations }
+    procedure InitJumpList;
   end;
 
 var
@@ -130,9 +135,10 @@ var
   BlockSelected: Integer;
   W, H: Integer;
   MT: array[0..15, 0..15] of Word;//Metatile
+
 implementation
 
-uses DTMmain, tmform, WorkSpace, palf, BitmapUtils, Math;
+uses DTMmain, tmform, WorkSpace, palf, BitmapUtils, Math, BookmarkInputForm;
 
 {$R *.dfm}
 
@@ -267,13 +273,66 @@ end;
 
 procedure Tdataform.hexedClick(Sender: TObject);
 begin
- If HexEd.Enabled then HexEd.SelectAll;
+ If HexEd.Enabled then
+  HexEd.SelectAll;
 end;
 
 procedure Tdataform.hexedKeyPress(Sender: TObject; var Key: Char);
 begin
  Key := UpCase(Key);
  If not (Key in ['0'..'9', 'A'..'F', #8]) then Key := #0;
+end;
+
+procedure Tdataform.InitJumpList;
+var
+  I, J: Byte;
+  BookmarkName: string;
+begin
+  pmJumpList.Items.Clear;
+  pmJumpList.Items.Add(NewItem('Добавить закладку', 0, False, True, AddBookmarkClick, 0, 'MenuItem0'));
+  pmJumpList.Items.Add(NewLine);
+  for I := 0 to JumpList.Count - 1 do
+  begin
+    with pmJumpList.Items do
+    begin
+      BookmarkName:= JumpList.Strings[I];
+      J:= LastDelimiter(':', BookmarkName);
+      BookmarkName:= Copy(BookmarkName, 1, J - 1);
+      Add(NewItem(BookmarkName, 0, False, True, AddressJumpListExecute, 0, 'MenuItem' + IntToStr(I+1)));
+      Items[I + 2].Tag:= I;
+    end;
+  end;
+end;
+
+procedure Tdataform.AddBookmarkClick(Sender: TObject);
+var
+  BookmarkName: string;
+  Address: string;
+  FileName: string;
+begin
+  Address:= IntToHex(ROMDataPos, 6);
+  FileName:= ExtractFileName(fname);
+  BookmarkName:= f_bookmark.GetBookmark(FileName + ' [' +  Address + ']');
+  if IsBookmarkAccepted then
+  begin
+    JumpList.Add(BookmarkName + ' :' + Address);
+    JumpList.SaveToFile(FileName + '.jumplist');
+    InitJumpList;
+    tilemapform.InitJumpList;
+  end;
+end;
+
+procedure Tdataform.AddressJumpListExecute(Sender: TObject);
+var
+  S: string;
+  I: Byte;
+  Item: TMenuItem;
+begin
+  Item:= TMenuItem(Sender);
+  S:= JumpList.Strings[Item.Tag];
+  I:= LastDelimiter(':', S); Inc(I);
+  S:= Copy(S, I, 6);
+  Datascroll.Position:= StrToInt('$' + S);
 end;
 
 procedure Tdataform.DataScrollChange(Sender: TObject);
@@ -536,34 +595,6 @@ begin
     BlockSelection.Top:= Block.Top;
     bMouseDown:= True;
   end;
-//  if ROMopened and (ssCtrl in Shift) and not bMouseDown then
-//  begin
-//    bMouseDown:= True;
-//    iMouseX:= X div TileWx2;
-//    iMouseY:= Y div TileHx2;
-//    I := romDataPos + djinntilemapper.dWidth * iMouseY + iMouseX;
-//    case dewidth of
-//      1:
-//        begin
-//          MT[0, 0]:= Data[I].Index;
-//          TileMap[0, 0]:= MT[0, 0];
-//        end;
-//      2, 4, 8, 16:
-//        begin
-//          for YY:= 0 to deheight - 1 do
-//          begin
-//            for XX:= 0 to dewidth - 1 do
-//            begin
-//              MT[YY, XX]:=  Data[I].Index;
-//              TileMap[YY, XX]:= MT[YY, XX];
-//              Inc(I);
-//            end;
-//            Dec(I, dewidth);
-//            Inc(I, DjinnTileMapper.dWidth);
-//          end;
-//        end;
-//    end;
-//  end;
 end;
 
 procedure Tdataform.DataMapMouseUp(Sender: TObject; Button: TMouseButton;
@@ -578,11 +609,11 @@ begin
     W:= Block.Width div TileWx2;  //Количиестов тайлов по горизонтали
     H:= Block.Height div TileHx2; //Количество тайлов по вертикали
     Nums:= W * H; // Определяем кол-во выделенных тайлов
-    for I := Low(SelectTiles) to High(SelectTiles) do
-    begin
-      SelectTiles[I].Free;
-    end;
-    SetLength(SelectTiles, Nums);
+//    for I := Low(SelectTiles) to High(SelectTiles) do
+//    begin
+//      SelectTiles[I].Free;
+//    end;
+    SetSize(SelectTiles, Nums);
     if bSwapXY then
     begin
       PatternPos:= (YY div TileHx2) * DTM.dWidth + (XX div TileWx2);
@@ -591,7 +622,7 @@ begin
         for J := 0 to W - 1 do
           begin
             //Move(Data[PatternPos + J].Index, SelectTiles[I * W * PatternSize + J * PatternSize], PatternSize);
-            SelectTiles[I * W + J]:= TBlock.Create;
+            //SelectTiles[I * W + J]:= TBlock.Create;
             SelectTiles[I * W + J].Value:= Data[PatternPos + J].Value;
           end;
           Inc(PatternPos, DTM.dWidth);
@@ -604,7 +635,7 @@ begin
       begin
         for J := 0 to H - 1 do
           begin
-            SelectTiles[I * H + J]:= TBlock.Create;
+            //SelectTiles[I * H + J]:= TBlock.Create;
             SelectTiles[I * H + J].Value:= Data[PatternPos + J].Value;
           end;
           Inc(PatternPos, DTM.dHeight);
@@ -614,99 +645,6 @@ begin
   end;
   bMouseDown:= False;
 end;
-  {if ROMopened and (ssCtrl in Shift)  and bMouseDown and (X <> iMouseX) and (Y <> iMouseY)  then
-  begin
-    bMouseDown:= False;
-    iMouseX:= X;
-    iMouseY:= Y;
-    if bSwapXY then
-       I := romDataPos + djinntilemapper.dWidth * (iMouseY div TileHx2) * PatternSize + (iMouseX div TileWx2) * PatternSize
-    else
-       I := romDataPos + (iMouseY div TileHx2) * PatternSize   +   djinntilemapper.dHeight * (iMouseX div TileWx2) * PatternSize ;
-
-    if DjinnTileMapper.MapFormat < mfGBA then
-    begin
-      case dewidth of
-        1:
-          begin
-            ROMdata^[I]:= MT[0, 0];
-          end;
-        2, 4, 8, 16:
-          begin
-            if bSwapXY then
-            begin
-              for YY:= 0 to deheight - 1 do
-              begin
-                for XX:= 0 to dewidth - 1 do
-                begin
-                  ROMData^[I]:= MT[YY, XX];
-                  Inc(I);
-                end;
-                Dec(I, dewidth);
-                Inc(I, DjinnTileMapper.dWidth);
-              end;
-            end
-            else
-            begin
-              for YY:= 0 to deheight - 1 do
-              begin
-                for XX:= 0 to dewidth - 1 do
-                begin
-                  ROMData^[I]:= MT[YY, XX];
-                  Inc(I, DjinnTileMapper.dHeight);
-                end;
-                Dec(I, DjinnTileMapper.dHeight* dewidth);
-                Inc(I);
-              end;
-            end;
-          end;
-      end;
-    end
-    else
-    begin
-      case dewidth of
-      1:
-        begin
-          ROMdata^[I]:= MT[0, 0] shr 8;
-          ROMdata^[I + 1]:= MT[0, 0];
-        end;
-      2, 4, 8, 16:
-        begin
-          if bSwapXY then
-          begin
-            for YY:= 0 to deheight - 1 do
-            begin
-              for XX:= 0 to dewidth - 1 do
-              begin
-                ROMData^[I]:= MT[YY, XX] shr 8;
-                ROMData^[I]:= MT[YY, XX + 1];
-                Inc(I, 2);
-              end;
-              Dec(I, dewidth * 2);
-              Inc(I, DjinnTileMapper.dWidth * 2);
-            end;
-          end
-          else
-          begin
-            for YY:= 0 to deheight - 1 do
-            begin
-              for XX:= 0 to dewidth - 1 do
-              begin
-                ROMData^[I]:= MT[YY, XX] shr 8;
-                ROMData^[I]:= MT[YY, XX + 1];
-                Inc(I, DjinnTileMapper.dHeight * 2);
-              end;
-              Dec(I, DjinnTileMapper.dHeight* dewidth * 2);
-              Inc(I, 2);
-            end;
-          end;
-        end;
-    end;
-    end;    
-    DjinnTileMapper.DrawTile(dewidth, deheight);
-    DjinnTileMapper.DataMapDraw();
-  end;
-end;  }
 
 procedure Tdataform.PrtClick(Sender: TObject);
 begin
@@ -736,12 +674,24 @@ begin
 end;
 
 procedure Tdataform.PalBoxChange(Sender: TObject);
+var
+  I: Integer;
 begin
-  Data[CDpos].Pal:= PalBox.ItemIndex;
-  BitWriter.Seek(Data[CDPos].Address * 8, soBeginning);
-  BitWriter.Write(Data[CDPos].Value, 8 * PatternSize);
-  bTileMapChanged:= True;
-  DTM.DataMapDraw();
+  if Block.Visible then
+  begin
+    for I := Low(SelectTiles) to High(SelectTiles) do
+    begin
+      SelectTiles[I].Pal:= PalBox.ItemIndex;
+    end;
+  end
+  else
+  begin
+    Data[CDpos].Pal:= PalBox.ItemIndex;
+    BitWriter.Seek(Data[CDPos].Address * 8, soBeginning);
+    BitWriter.Write(Data[CDPos].Value, 8 * PatternSize);
+    bTileMapChanged:= True;
+    DTM.DataMapDraw();
+  end;
 end;
 
 procedure Tdataform.DrawClick(Sender: TObject);
@@ -921,7 +871,7 @@ begin
     YY:= Block.Top - DataMap.Top   -  (DataMap.Top mod  TileHx2);
     W:= Block.Width div TileWx2;  //Количиестов тайлов по горизонтали
     H:= Block.Height div TileHx2; //Количество тайлов по вертикали
-    if (Length(SelectTiles) = W*H) and (Clipboard.HasFormat(CF_DTMDATA)) then
+    if (Length(SelectTiles) = W*H) then
     begin
       if bSwapXY then
       begin
@@ -932,7 +882,11 @@ begin
           begin
             Data[PatternPos + J].Value:= SelectTiles[I * W  + J].Value;
             BitWriter.Seek(Data[PatternPos + J].Address * 8, soBeginning);
-            BitWriter.Write(Data[PatternPos + J].Value, 8 * PatternSize);
+            case DTM.MapFormat of
+              mfSingleByte, mfGBC: BitWriter.Write(Data[PatternPos + J].Value, 8);
+              mfGBA, mfSNES, mfPCE: BitWriter.Write(Swap(Data[PatternPos + J].Value), 16);
+              mfMSX, mfSMS: BitWriter.Write(Data[PatternPos + J].Value, 16);
+            end;
           end;
           Inc(PatternPos, DTM.dWidth);
         end;
@@ -947,7 +901,11 @@ begin
               //Move(SelectTiles[I * H + J], WSMap[PatternPos + J],  PatternSize);
               Data[PatternPos + J].Value:= SelectTiles[I * H + J].Value;
               BitWriter.Seek(Data[PatternPos + J].Address * 8, soBeginning);
-              BitWriter.Write(Data[PatternPos + J].Value, 8 * PatternSize);
+              case DTM.MapFormat of
+                mfSingleByte, mfGBC: BitWriter.Write(Data[PatternPos + J].Value, 8);
+                mfGBA, mfSNES, mfPCE: BitWriter.Write(Swap(Data[PatternPos + J].Value), 16);
+                mfMSX, mfSMS: BitWriter.Write(Data[PatternPos + J].Value, 16);
+              end;
             end;
             Inc(PatternPos, DTM.dHeight);
         end;

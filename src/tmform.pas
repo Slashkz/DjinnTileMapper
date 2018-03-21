@@ -6,7 +6,7 @@ uses
   Windows, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms,
   Dialogs, StdCtrls, Spin, ExtCtrls, Buttons,
   ImgList,
-  ComCtrls, ToolWin, System.ImageList;
+  ComCtrls, ToolWin, System.ImageList, System.Actions, Vcl.ActnList, Vcl.Menus;
 
 type
   Ttilemapform = class(TForm)
@@ -44,6 +44,11 @@ type
     TileSelection: TShape;
     HexNums: TImage;
     Grid: TImage;
+    tbAddBookmark: TToolButton;
+    pmJumpList: TPopupMenu;
+    AddBookmark: TMenuItem;
+    actlst1: TActionList;
+    ActionAddressJumpList: TAction;
     procedure CodecboxChange(Sender: TObject);
     procedure CodecboxKeyPress(Sender: TObject; var Key: Char);
     procedure TileMapClick(Sender: TObject);
@@ -79,11 +84,13 @@ type
       Y: Integer);
     procedure FormCreate(Sender: TObject);
     procedure SetSize(Width, Height: Integer);
-    procedure ChangeSize();
+    procedure ActionAddressJumpListExecute(Sender: TObject);
+    procedure AddBookmarkClick(Sender: TObject);
   private
     { Private declarations }
   public
     { Public declarations }
+    procedure InitJumpList;
   end;
   procedure MoveTileSelection(TileSelection: TShape; ImageBounds: TRect; X, Y, W, H: Integer);
 
@@ -94,7 +101,7 @@ implementation
 
 {$R *.dfm}
 
-uses dtmmain, teditf, dataf, BitmapUtils, WorkSpace;
+uses dtmmain, teditf, dataf, BitmapUtils, WorkSpace, BookmarkInputForm;
 
 procedure TTileMapForm.SetSize(Width, Height: Integer);
 begin
@@ -132,10 +139,6 @@ begin
   end;
 end;
 
-procedure TTileMapForm.ChangeSize();
-begin
-//
-end;
 
 procedure Ttilemapform.CodecboxChange(Sender: TObject);
 var
@@ -178,6 +181,8 @@ begin
   Grid.Picture.Bitmap.TransparentMode:= tmFixed;
   Grid.Picture.Bitmap.TransparentColor:= clWhite;
 end;
+
+
 
 procedure MoveTileSelection(TileSelection: TShape; ImageBounds: TRect; X, Y, W, H: Integer);
 begin
@@ -351,8 +356,6 @@ begin
   begin
     bTMMouseDown:= True;
     TileCaptured:= Map[Y div TileHx2, X div TileWx2];
-//    TileSelection.Left:= MapXY[TileCaptured].X * TileWx2;
-//    TileSelection.Top:=  MapXY[TileCaptured].Y * TileHx2;
   end;
 end;
 
@@ -548,7 +551,6 @@ begin
   TileSelection.Height:= teheight * TileHx2;
   TileSelection.Left:= 0;
   TileSelection.Top:= 0;
-  //DjinnTileMapper.DrawTileMap();
 end;
 
 procedure Ttilemapform.TileMapGridClick(Sender: TObject);
@@ -557,7 +559,6 @@ begin
   Grid.Visible:= bTileMapGrid;
   GridDraw(Grid.Picture.Bitmap, TileWx2, TileHx2, clSkyBlue);
   GridDraw(Grid.Picture.Bitmap, TileWx2 * 8, TileHx2 * 8, clYellow);
-  //DjinnTileMapper.DrawTileMap();
 end;
 
 
@@ -581,6 +582,58 @@ end;
 procedure Ttilemapform.tbGoToClick(Sender: TObject);
 begin
   DTM.GoTo1.Click();
+end;
+
+procedure Ttilemapform.InitJumpList;
+var
+  I, J: Byte;
+  BookmarkName: string;
+begin
+  pmJumpList.Items.Clear;
+  pmJumpList.Items.Add(NewItem('Добавить закладку', 0, False, True, AddBookmarkClick, 0, 'MenuItem0'));
+  pmJumpList.Items.Add(NewLine);
+  for I := 0 to JumpList.Count - 1 do
+  begin
+    with pmJumpList.Items do
+    begin
+      BookmarkName:= JumpList.Strings[I];
+      J:= LastDelimiter(':', BookmarkName);
+      BookmarkName:= Copy(BookmarkName, 1, J - 1);
+      Add(NewItem(BookmarkName, 0, False, True, ActionAddressJumpListExecute, 0, 'MenuItem' + IntToStr(I+1)));
+      Items[I + 2].Tag:= I;
+    end;
+  end;
+end;
+
+procedure Ttilemapform.ActionAddressJumpListExecute(Sender: TObject);
+var
+  S: string;
+  I: Byte;
+  Item: TMenuItem;
+begin
+  Item:= TMenuItem(Sender);
+  S:= JumpList.Strings[Item.Tag];
+  I:= FindDelimiter(':', S); Inc(I);
+  S:= Copy(S, I, 6);
+  TMapScroll.Position:= StrToInt('$' + S);
+end;
+
+procedure Ttilemapform.AddBookmarkClick(Sender: TObject);
+var
+  BookmarkName: string;
+  Address: string;
+  FileName: string;
+begin
+  Address:= IntToHex(DataPos, 6);
+  FileName:= ExtractFileName(fname);
+  BookmarkName:= f_bookmark.GetBookmark(FileName + ' [' +  Address + ']');
+  if IsBookmarkAccepted then
+  begin
+    JumpList.Add(BookmarkName + ' :' + Address);
+    JumpList.SaveToFile(FileName + '.jumplist');
+    InitJumpList;
+    dataform.InitJumpList;
+  end;
 end;
 
 procedure Ttilemapform.cbHVChange(Sender: TObject);
@@ -617,11 +670,35 @@ begin
     For y := 0 to RowCount - 1 do
       For x := 0 to 16 - 1 do
       begin
-        //HexNums.Picture.Bitmap.Canvas.TextOut(MapXY[I].X * TileWx2, MapXY[I].Y * TileHx2, IntToHex(I, 2));
-        DTM.hexnums3.Draw(TileMap.Picture.Bitmap.Canvas, MapXY[I].X * TileWx2, MapXY[I].Y * TileHx2, I and $7FF, True);
-        //DjinnTileMapper.HexNumbers.Draw(Bitmap.Canvas, 0, 0, I and $FF, True);
-        //HexNums.Picture.Bitmap.Canvas.Draw( MapXY[I].X * TileWx2, MapXY[I].Y * TileHx2, Bitmap);
-        Inc(I);
+        case DTM.MapFormat of
+          mfSingleByte, mfGBC:
+            begin
+              DTM.HexNums.Draw(TileMap.Picture.Bitmap.Canvas, MapXY[I].X * TileWx2, MapXY[I].Y * TileHx2, ((I shr 4) and 15), True);
+              DTM.HexNums.Draw(TileMap.Picture.Bitmap.Canvas, MapXY[I].X * TileWx2 + 5, MapXY[I].Y * TileHx2, (I and 15), True);
+              I:= Succ(I) and $FF;
+            end;
+          mfSMS:
+            begin
+              DTM.HexNums.Draw(TileMap.Picture.Bitmap.Canvas, MapXY[I].X * TileWx2, MapXY[I].Y * TileHx2, (I shr 8) and 15, True);
+              DTM.HexNums.Draw(TileMap.Picture.Bitmap.Canvas, MapXY[I].X * TileWx2 + 5, MapXY[I].Y * TileHx2, ((I shr 4) and 15), True);
+              DTM.HexNums.Draw(TileMap.Picture.Bitmap.Canvas, MapXY[I].X * TileWx2 + 10, MapXY[I].Y * TileHx2, (I and 15), True);
+              I:= Succ(I) and $1FF;
+            end;
+          mfGBA, mfSNES:
+            begin
+              DTM.HexNums.Draw(TileMap.Picture.Bitmap.Canvas, MapXY[I].X * TileWx2, MapXY[I].Y * TileHx2, (I shr 8) and 15, True);
+              DTM.HexNums.Draw(TileMap.Picture.Bitmap.Canvas, MapXY[I].X * TileWx2 + 5, MapXY[I].Y * TileHx2, ((I shr 4) and 15), True);
+              DTM.HexNums.Draw(TileMap.Picture.Bitmap.Canvas, MapXY[I].X * TileWx2 + 10, MapXY[I].Y * TileHx2, (I and 15), True);
+              I:= Succ(I) and $3FF;
+            end;
+          mfMSX, mfPCE:
+            begin
+              DTM.HexNums.Draw(TileMap.Picture.Bitmap.Canvas, MapXY[I].X * TileWx2, MapXY[I].Y * TileHx2, (I shr 8) and 15, True);
+              DTM.HexNums.Draw(TileMap.Picture.Bitmap.Canvas, MapXY[I].X * TileWx2 + 5, MapXY[I].Y * TileHx2, ((I shr 4) and 15), True);
+              DTM.HexNums.Draw(TileMap.Picture.Bitmap.Canvas, MapXY[I].X * TileWx2 + 10, MapXY[I].Y * TileHx2, (I and 15), True);
+              I:= Succ(I) and $7FF;
+            end;
+        end;
       end;
   end;
 end;
