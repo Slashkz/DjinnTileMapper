@@ -611,7 +611,6 @@ var
   Width, Height, BlockCount, MetaTilesCount: Integer;
   StartTick: Integer;
 begin
-   //StartTick:= GetTickCount;
   tilebmp := TBitmap.Create;
   bbb := TBitmap.Create;
   if not bWorkSpace then
@@ -706,7 +705,6 @@ begin
   begin
     for I := Low(Data) to High(Data) do
     begin
-      HexNums.Draw(dataform.DataMap.Picture.Bitmap.Canvas, Data[I].x * TileWx2, Data[I].y * TileHx2, Data[I].Index and $7FF, True);
       case DTM.MapFormat of
         mfSingleByte, mfGBC:
           begin
@@ -737,8 +735,6 @@ begin
       end;
 
     end;
-
-
   end;
 end;
 
@@ -1272,7 +1268,7 @@ begin
     for Y := RowCount to 128 - 1 do
       for X := 0 to 15 do
       begin
-        ToolBarCold.Draw(TileMapForm.TileMap.Canvas, MapXY[I].X * TileWx2, MapXY[I].Y * TileHx2, 79, True);
+        ToolBarCold.Draw(TileMapForm.TileMap.Canvas, MapXY[I].X * TileWx2, MapXY[I].Y * TileHx2, 59, True);
         Inc(I);
       end;
   end;
