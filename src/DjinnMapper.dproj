@@ -112,7 +112,7 @@
         <DCC_Optimize>true</DCC_Optimize>
         <VerInfo_IncludeVerInfo>true</VerInfo_IncludeVerInfo>
         <VerInfo_Locale>1033</VerInfo_Locale>
-        <Icon_MainIcon>DjinnMapper_Icon2.ico</Icon_MainIcon>
+        <Icon_MainIcon>DjinnMapper_Icon4.ico</Icon_MainIcon>
     </PropertyGroup>
     <ItemGroup>
         <DelphiCompile Include="$(MainSource)">

@@ -1616,6 +1616,8 @@ begin
     BitReader.Free;
     BitWriter.Free;
     JumpList.Free;
+    dataform.InitJumpList;
+    tilemapform.InitJumpList;
   end;
   JumpList:= TStringList.Create;
   ROMsize := FileSize(ROM);

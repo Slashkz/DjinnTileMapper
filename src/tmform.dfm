@@ -32,7 +32,6 @@ object tilemapform: Ttilemapform
     ShowHint = False
     TabOrder = 0
     OnChange = TMapScrollChange
-    ExplicitHeight = 260
   end
   object scrlbx: TScrollBox
     Left = 0
@@ -44,7 +43,6 @@ object tilemapform: Ttilemapform
     VertScrollBar.Style = ssHotTrack
     Align = alClient
     TabOrder = 1
-    ExplicitHeight = 260
     object TileMap: TImage
       Left = 0
       Top = 0
@@ -97,7 +95,6 @@ object tilemapform: Ttilemapform
     Height = 49
     Align = alBottom
     TabOrder = 2
-    ExplicitTop = 285
     object grp1: TGroupBox
       Left = 183
       Top = -1
@@ -300,7 +297,7 @@ object tilemapform: Ttilemapform
         Left = 192
         Top = 0
         Width = 105
-        Height = 22
+        Height = 21
         TabOrder = 1
         Text = '2BPP NES'
         OnChange = CodecboxChange
@@ -339,7 +336,6 @@ object tilemapform: Ttilemapform
         Text = #1058#1072#1081#1083' : '
         Width = 50
       end>
-    ExplicitTop = 334
   end
   object tlb2: TToolBar
     Left = 279
@@ -359,7 +355,6 @@ object tilemapform: Ttilemapform
     ShowHint = True
     TabOrder = 5
     Transparent = False
-    ExplicitHeight = 260
     object tbBOF: TToolButton
       Left = 0
       Top = 0
