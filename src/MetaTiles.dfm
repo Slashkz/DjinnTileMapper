@@ -4,7 +4,7 @@ object f_metatiles: Tf_metatiles
   BorderIcons = [biSystemMenu, biMinimize]
   Caption = #1050#1072#1088#1090#1072' '#1084#1077#1090#1072#1090#1072#1081#1083#1086#1074
   ClientHeight = 400
-  ClientWidth = 465
+  ClientWidth = 514
   Color = clBackground
   Font.Charset = DEFAULT_CHARSET
   Font.Color = clWindowText
@@ -20,11 +20,12 @@ object f_metatiles: Tf_metatiles
   object scrlbx1: TScrollBox
     Left = 0
     Top = 29
-    Width = 465
+    Width = 497
     Height = 352
     Align = alClient
     TabOrder = 0
     OnClick = scrlbx1Click
+    ExplicitWidth = 465
     object MapImage: TImage
       Left = 0
       Top = 0
@@ -51,6 +52,7 @@ object f_metatiles: Tf_metatiles
       Brush.Style = bsClear
       Pen.Color = clWhite
       Pen.Mode = pmMergePenNot
+      OnMouseMove = TileSelectionMouseMove
     end
     object Block: TImage
       Left = 232
@@ -73,7 +75,7 @@ object f_metatiles: Tf_metatiles
   object tlb1: TToolBar
     Left = 0
     Top = 0
-    Width = 465
+    Width = 514
     Height = 29
     Caption = 'tlb1'
     DisabledImages = DjinnTileMapper.ToolbarDisabled
@@ -81,6 +83,7 @@ object f_metatiles: Tf_metatiles
     Images = DjinnTileMapper.ToolBarHot
     TabOrder = 1
     Transparent = False
+    ExplicitWidth = 465
     object tbGoTo: TToolButton
       Left = 0
       Top = 0
@@ -190,27 +193,80 @@ object f_metatiles: Tf_metatiles
         'PC Engine Map'
         'Sega Master System Map')
     end
+    object tbBookmark: TToolButton
+      Left = 441
+      Top = 0
+      Caption = 'tbBookmark'
+      DropdownMenu = pmJumpList
+      Enabled = False
+      ImageIndex = 73
+    end
   end
   object stat1: TStatusBar
     Left = 0
     Top = 381
-    Width = 465
+    Width = 514
     Height = 19
-    Panels = <>
+    Panels = <
+      item
+        Text = #1040#1076#1088#1077#1089' : 000000 / 000000'
+        Width = 150
+      end
+      item
+        Text = 'X ,Y : 000 / 000 '
+        Width = 100
+      end
+      item
+        Text = '000000 : 0000'
+        Width = 100
+      end
+      item
+        Width = 50
+      end>
+    ExplicitWidth = 465
+  end
+  object MetaScroll: TScrollBar
+    Left = 497
+    Top = 29
+    Width = 17
+    Height = 352
+    Align = alRight
+    Kind = sbVertical
+    PageSize = 0
+    TabOrder = 3
+    OnChange = MetaScrollChange
+    ExplicitLeft = 503
+    ExplicitTop = 23
   end
   object OpenDialog1: TOpenDialog
-    Left = 360
-    Top = 80
+    Left = 72
+    Top = 40
   end
   object SaveDialog1: TSaveDialog
-    Left = 392
-    Top = 80
+    Left = 136
+    Top = 40
   end
   object Timer1: TTimer
     Enabled = False
     Interval = 100
     OnTimer = Timer1Timer
-    Left = 400
-    Top = 133
+    Left = 168
+    Top = 40
+  end
+  object actlst1: TActionList
+    Left = 40
+    Top = 40
+    object ActionAddressJumpList: TAction
+      Caption = 'ActionAddressJumpList'
+      OnExecute = ActionAddressJumpListExecute
+    end
+  end
+  object pmJumpList: TPopupMenu
+    Left = 104
+    Top = 40
+    object AddBookmark: TMenuItem
+      Caption = #1044#1086#1073#1072#1074#1080#1090#1100' '#1079#1072#1082#1083#1072#1076#1082#1091
+      OnClick = AddBookmarkClick
+    end
   end
 end

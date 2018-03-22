@@ -5,7 +5,8 @@ interface
 uses
   Winapi.Windows, Winapi.Messages, System.SysUtils, System.Variants, System.Classes, Vcl.Graphics,
   Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.StdCtrls, Vcl.Samples.Spin,
-  Vcl.ComCtrls, Vcl.ExtCtrls, Vcl.ToolWin, Math, DTMmain;
+  Vcl.ComCtrls, Vcl.ExtCtrls, Vcl.ToolWin, Math, DTMmain, Vcl.Menus,
+  System.Actions, Vcl.ActnList;
 
 type
   Tf_metatiles = class(TForm)
@@ -29,6 +30,12 @@ type
     cbMapFormat: TComboBox;
     Timer1: TTimer;
     BlockSelection: TShape;
+    MetaScroll: TScrollBar;
+    actlst1: TActionList;
+    ActionAddressJumpList: TAction;
+    pmJumpList: TPopupMenu;
+    AddBookmark: TMenuItem;
+    tbBookmark: TToolButton;
     procedure DrawMetaTiles();
     procedure FormCreate(Sender: TObject);
     procedure ChangeMap(WW, HH: Byte);
@@ -44,30 +51,91 @@ type
     procedure MapImageMouseMove(Sender: TObject; Shift: TShiftState; X,
       Y: Integer);
     procedure tbShowHexClick(Sender: TObject);
+    procedure MetaScrollEnable();
+    procedure MetaScrollChange(Sender: TObject);
+    procedure TileSelectionMouseMove(Sender: TObject; Shift: TShiftState; X,
+      Y: Integer);
+    procedure ActionAddressJumpListExecute(Sender: TObject);
+    procedure AddBookmarkClick(Sender: TObject);
   private
     { Private declarations }
+    FDataPosition: Integer;
+    procedure SetDataPosition(const Value: Integer);
+    procedure ShowInfo;
   public
     { Public declarations }
+    property DataPosition: Integer read FDataPosition write SetDataPosition;
+    procedure InitJumpList;
   end;
 
 var
   f_metatiles: Tf_metatiles;
-  //Data: array of Byte;
   Map: BlockArr;
   MapFormat: TMapFormat = mfMSX;
-  MapWidth, MapHeight, MTWidth, MTHeight, DataPosition: Integer;
-
+  MapWidth, MapHeight, MTWidth, MTHeight: Integer;
 
 
 implementation
 
-uses BitmapUtils, inputbox;
+uses BitmapUtils, inputbox, dataf, BookmarkInputForm;
 
 var
   iMouseX, iMouseY: Integer;
   iMTPos: Integer = 0;
   bShowHex: Boolean = False;
+  PatternSize: Byte;
 {$R *.dfm}
+
+procedure Tf_metatiles.ActionAddressJumpListExecute(Sender: TObject);
+var
+  S: string;
+  I: Byte;
+  Item: TMenuItem;
+begin
+  Item:= TMenuItem(Sender);
+  S:= JumpList.Strings[Item.Tag];
+  I:= LastDelimiter(':', S); Inc(I);
+  S:= Copy(S, I, 6);
+  DataPosition:= StrToInt('$' + S);
+end;
+
+procedure Tf_metatiles.AddBookmarkClick(Sender: TObject);
+var
+  BookmarkName: string;
+  Address: string;
+  FileName: string;
+begin
+  Address:= IntToHex(ROMDataPos, 6);
+  FileName:= ExtractFileName(fname);
+  BookmarkName:= f_bookmark.GetBookmark(FileName + ' [' +  Address + ']');
+  if IsBookmarkAccepted then
+  begin
+    JumpList.Add(BookmarkName + ' :' + Address);
+    JumpList.SaveToFile(FileName + '.jumplist');
+    InitAllJumpLists;
+  end;
+end;
+
+procedure Tf_metatiles.InitJumpList;
+var
+  I, J: Byte;
+  BookmarkName: string;
+begin
+  pmJumpList.Items.Clear;
+  pmJumpList.Items.Add(NewItem('Добавить закладку', 0, False, True, AddBookmarkClick, 0, 'MenuItem0'));
+  pmJumpList.Items.Add(NewLine);
+  for I := 0 to JumpList.Count - 1 do
+  begin
+    with pmJumpList.Items do
+    begin
+      BookmarkName:= JumpList.Strings[I];
+      J:= LastDelimiter(':', BookmarkName);
+      BookmarkName:= Copy(BookmarkName, 1, J - 1);
+      Add(NewItem(BookmarkName, 0, False, True, ActionAddressJumpListExecute, 0, 'MenuItem' + IntToStr(I+1)));
+      Items[I + 2].Tag:= I;
+    end;
+  end;
+end;
 
 procedure Tf_metatiles.cbDirectionChange(Sender: TObject);
 var
@@ -119,6 +187,10 @@ end;
 procedure Tf_metatiles.cbMapFormatChange(Sender: TObject);
 begin
   MapFormat:= TMapFormat(cbMapFormat.ItemIndex);
+  if MapFormat < mfGBA then
+    PatternSize:= 1
+  else
+    PatternSize:= 2;
   if ROMopened then
   begin
     ChangeMap(MTWidth, MTHeight);
@@ -134,10 +206,6 @@ begin
   begin
     W:= MapWidth;
     H:= MapHeight;
-//    for I := Low(Map) to High(Map) do
-//    begin
-//      Map[I].Free;
-//    end;
     SetSize(Map, MapWidth * MapHeight * MTWidth * MTHeight);
     BitReader.Seek(DataPosition * 8, soBeginning);
     I:= 0;
@@ -151,7 +219,6 @@ begin
           begin
             for XX:= 0 to WW - 1 do
             begin
-              //Map[I]:= TBlock.Create;
               Map[I].Address:= BitReader.Position div 8;
               case MapFormat of
                 mfSingleByte, mfGBC:
@@ -179,7 +246,6 @@ begin
           begin
             for YY:= 0 to HH-1 do
             begin
-              //Map[I]:= TBlock.Create;
               Map[I].Address:= BitReader.Position div 8;
               case MapFormat of
                 mfSingleByte, mfGBC:
@@ -251,15 +317,15 @@ begin
       DTM.HexNums.Draw(MapImage.Picture.Bitmap.Canvas, Map[I * MTWidth * MTHeight].x * TileWx2 + 5, Map[I * MTWidth * MTHeight].y * TileHx2, (I shr 4) and 15, True);
       DTM.HexNums.Draw(MapImage.Picture.Bitmap.Canvas, Map[I * MTWidth * MTHeight].x * TileWx2 + 10, Map[I * MTWidth * MTHeight].y * TileHx2, I and 15, True);
     end;
-
   end;
+  DTM.DataMapDraw;
 end;
 
 procedure Tf_metatiles.FormClose(Sender: TObject; var Action: TCloseAction);
 var
   I: Integer;
 begin
-
+  DTM.ShowMetatilesMap.Checked:= False;
 end;
 
 procedure Tf_metatiles.FormCreate(Sender: TObject);
@@ -269,7 +335,6 @@ begin
   MapWidth:= 16;
   MapHeight:= 16;
   PatternSize:= 2;
-  DataPosition:= 0;
   MapImage.Width:= MapWidth * MTWidth * TileWx2;
   MapImage.Height:= MapHeight * MTHeight * TileHx2;
   MapImage.Picture.Bitmap.Width:= MapImage.Width;
@@ -292,6 +357,8 @@ begin
   if ROMopened then
     DrawMetaTiles();
 end;
+
+
 
 procedure Tf_metatiles.MapChange(Sender: TObject);
 begin
@@ -330,6 +397,20 @@ procedure Tf_metatiles.MapImageMouseMove(Sender: TObject; Shift: TShiftState; X,
 begin
  iMouseX := Min(X, MapImage.Width - 1);
  iMouseY := Min(Y, MapImage.Height - 1);
+ ShowInfo;
+end;
+
+procedure Tf_metatiles.MetaScrollChange(Sender: TObject);
+begin
+  DataPosition:= MetaScroll.Position;
+end;
+
+procedure Tf_metatiles.MetaScrollEnable;
+begin
+  MetaScroll.Max := ROMsize - MapWidth * MapHeight * MTWidth * MTHeight * PatternSize;
+  MetaScroll.LargeChange := MTWidth * MTHeight * PatternSize;
+  MetaScroll.SmallChange := 1;
+  MetaScroll.Enabled := True;
 end;
 
 procedure Tf_metatiles.scrlbx1Click(Sender: TObject);
@@ -345,6 +426,30 @@ begin
 
     TileSelection.Left:= (MapImage.Left div TileWx2 div MTWidth) * TileWx2 * MTWidth + (MapImage.Left mod (TileWx2 * MTWidth)) + Map[iMTPos].X * TileWx2;
     TileSelection.Top:= (MapImage.Top div TileHx2 div MTHeight) * TileHx2 * MTHeight + (MapImage.Top mod (TileHx2 * MTHeight)) + Map[iMTPos].Y * TileHx2;
+  end;
+end;
+
+procedure Tf_metatiles.SetDataPosition(const Value: Integer);
+begin
+  FDataPosition:= Value;
+  MetaScroll.Position:= Value;
+  Caption:= 'Карта метатайлов ' + IntToHex(Value, 6);
+  stat1.Panels.Items[0].Text:= 'Адрес : ' + IntToHex(Value, 6) + ' / ' + IntToHex(ROMSize, 6);
+  ChangeMap(MTWidth, MTHeight);
+  DrawMetaTiles;
+end;
+
+procedure Tf_metatiles.ShowInfo;
+var
+  MTSize: Integer;
+  I: Integer;
+begin
+  if ROMopened then
+  begin
+    MTSize := MTWidth * MTHeight;
+    I := MapWidth * MTSize * (iMouseY div TileHx2 div MTHeight) + (iMousex div TileWx2 div MTWidth) * MTSize;
+    stat1.Panels.Items[2].Text := IntToHex(Map[I].Address, 6) + ' : ' + IntToHex(Map[I].Index, 4);
+    stat1.Panels.Items[1].Text := 'X, Y : ' + IntToHex(iMouseX div TileWx2 div MTWidth, 3) + ' / ' + IntToHex(iMouseY div TileWx2 div MTHeight, 3);
   end;
 end;
 
@@ -368,8 +473,6 @@ begin
       end
     end;
     DataPosition := v;
-    ChangeMap(MTWidth, MTHeight);
-    DrawMetaTiles();
   end;
 end;
 
@@ -391,6 +494,14 @@ begin
   bShowHex:= tbShowHex.Down;
   if ROMopened then
     DrawMetaTiles();
+end;
+
+procedure Tf_metatiles.TileSelectionMouseMove(Sender: TObject;
+  Shift: TShiftState; X, Y: Integer);
+begin
+  iMouseX:= TileSelection.Left + X - MapImage.Left;
+  iMouseY:= TileSelection.Top + Y - MapImage.Top;
+  ShowInfo;
 end;
 
 procedure Tf_metatiles.Timer1Timer(Sender: TObject);
