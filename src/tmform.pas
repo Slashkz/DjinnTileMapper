@@ -227,14 +227,40 @@ begin
   DTM.DrawTile(tewidth, teheight);
   If tmapscroll.enabled then
     TMapScroll.SetFocus;
+
+
   if bStep then
   begin
-    TileMapDblClick(Self);
+    if bWorkSpace then
+      WSMap[iWSPos].Index:= DTM.Bank
+    else
+    begin
+      Data[CDpos].Index:= DTM.Bank;
+      BitWriter.Seek(Data[CDPos].Address * 8, soBeginning);
+      case DTM.MapFormat of
+        mfSingleByte, mfGBC: BitWriter.Write(Data[CDpos].Value, 8);
+        mfGBA, mfSNES, mfPCE: BitWriter.Write(Swap(Data[CDpos].Value), 16);
+        mfMSX, mfSMS: BitWriter.Write(Data[CDpos].Value, 16);
+      end;
+    end;
+    DTM.DataMapDraw;
   end
   else
   if bType then
   begin
-    TileMapDblClick(Self);
+    if bWorkSpace then
+      WSMap[iWSPos].Index:= DTM.Bank
+    else
+    begin
+      Data[CDpos].Index:= DTM.Bank;
+      BitWriter.Seek(Data[CDPos].Address * 8, soBeginning);
+      case DTM.MapFormat of
+        mfSingleByte, mfGBC: BitWriter.Write(Data[CDpos].Value, 8);
+        mfGBA, mfSNES, mfPCE: BitWriter.Write(Swap(Data[CDpos].Value), 16);
+        mfMSX, mfSMS: BitWriter.Write(Data[CDpos].Value, 16);
+      end;
+    end;
+
     if bSwapXY then
     begin
       if bWorkSpace then
@@ -254,27 +280,27 @@ begin
     begin
       if iWSPos = iWSWidth * iWSHeight then
       begin
-//        if bSwapXY then
-          Dec(iWSPos);
-//        else
-//          Dec(iWSPos, iWSHeight);
+        if bSwapXY then
+          Dec(iWSPos)
+        else
+          Dec(iWSPos, iWSHeight);
       end;  
     end
     else
     If romDataPos + CDpos = ROMsize then
     begin
-//      if bSwapXY then
-        Dec(CDPos);
-//      else
-//        Dec(CDPos, DjinnTileMapper.dHeight)
+      if bSwapXY then
+        Dec(CDPos)
+      else
+        Dec(CDPos, DTM.dHeight)
     end;
 
     If (CDPos >= DTM.dWidth * DTM.dHeight) and not bWorkSpace then
     begin
-//      if bSwapXY then
-        Dec(CDpos);
-//      else
-//        Dec(CDpos, DjinnTileMapper.dHeight * PatternSize);
+      if bSwapXY then
+        Dec(CDpos)
+      else
+        Dec(CDpos, DTM.dHeight * PatternSize);
 
       If not tTblOpened then
       begin
@@ -295,6 +321,7 @@ begin
       Else
         DTM.Bank := TileTable[Data[CDPos].Index and $FF];
     end;
+    DTM.DataMapDraw;
   end;
 
 end;
@@ -315,7 +342,15 @@ begin
     if bWorkSpace then
       WSMap[iWSPos].Index:= DTM.Bank
     else
+    begin
       Data[CDpos].Index:= DTM.Bank;
+      BitWriter.Seek(Data[CDPos].Address * 8, soBeginning);
+      case DTM.MapFormat of
+        mfSingleByte, mfGBC: BitWriter.Write(Data[CDpos].Value, 8);
+        mfGBA, mfSNES, mfPCE: BitWriter.Write(Swap(Data[CDpos].Value), 16);
+        mfMSX, mfSMS: BitWriter.Write(Data[CDpos].Value, 16);
+      end;
+    end;
   end
   Else
   begin
@@ -334,15 +369,6 @@ begin
    begin
     Data[CDpos].Index := 0;
    end;
-  end;
-  I:= tmMouseX div 16;
-  J:= tmMouseY div 16;
-  for Y:= 0 to teheight - 1 do
-  begin
-    for X:= 0 to tewidth - 1 do
-    begin
-      dtmmain.TileMap[Y, X]:= Map[J + Y, I + X];
-    end;
   end;
   DTM.DataMapDraw;
  end;
@@ -374,6 +400,8 @@ end;
 procedure Ttilemapform.TileSelectionMouseDown(Sender: TObject;
   Button: TMouseButton; Shift: TShiftState; X, Y: Integer);
 begin
+  tmMouseX:= TileSelection.Left;
+  tmMouseY:= TileSelection.Top;
   TileMapClick(Self);
 end;
 
@@ -631,8 +659,7 @@ begin
   begin
     JumpList.Add(BookmarkName + ' :' + Address);
     JumpList.SaveToFile(FileName + '.jumplist');
-    InitJumpList;
-    dataform.InitJumpList;
+    InitAllJumpLists;
   end;
 end;
 

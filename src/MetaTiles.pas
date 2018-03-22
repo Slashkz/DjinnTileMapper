@@ -105,7 +105,7 @@ var
   Address: string;
   FileName: string;
 begin
-  Address:= IntToHex(ROMDataPos, 6);
+  Address:= IntToHex(DataPosition, 6);
   FileName:= ExtractFileName(fname);
   BookmarkName:= f_bookmark.GetBookmark(FileName + ' [' +  Address + ']');
   if IsBookmarkAccepted then

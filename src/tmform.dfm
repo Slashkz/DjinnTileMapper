@@ -474,16 +474,16 @@ object tilemapform: Ttilemapform
     end
   end
   object pmJumpList: TPopupMenu
-    Left = 208
-    Top = 161
+    Left = 56
+    Top = 33
     object AddBookmark: TMenuItem
       Caption = #1044#1086#1073#1072#1074#1080#1090#1100' '#1079#1072#1082#1083#1072#1076#1082#1091
       OnClick = AddBookmarkClick
     end
   end
   object actlst1: TActionList
-    Left = 216
-    Top = 233
+    Left = 24
+    Top = 33
     object ActionAddressJumpList: TAction
       Caption = 'ActionAddressJumpList'
       OnExecute = ActionAddressJumpListExecute

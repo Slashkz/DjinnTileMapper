@@ -36,10 +36,6 @@ type
     tlb2: TToolBar;
     Prt: TSpeedButton;
     PalBox: TComboBox;
-    sbType: TSpeedButton;
-    Draw: TSpeedButton;
-    Step: TSpeedButton;
-    cbNone: TSpeedButton;
     cbMapFormat: TComboBox;
     tbGoTo: TToolButton;
     sbUp: TSpeedButton;
@@ -62,6 +58,10 @@ type
     pmJumpList: TPopupMenu;
     AddBookmark: TMenuItem;
     AddressJumpList: TAction;
+    sbEdit: TSpeedButton;
+    sbDraw: TSpeedButton;
+    sbType: TSpeedButton;
+    sbStep: TSpeedButton;
     procedure dLeftBtnClick(Sender: TObject);
     procedure dRightBtnClick(Sender: TObject);
     procedure WidthEditChange(Sender: TObject);
@@ -85,10 +85,6 @@ type
     procedure FlipYClick(Sender: TObject);
     procedure FlipXClick(Sender: TObject);
     procedure PalBoxChange(Sender: TObject);
-    procedure DrawClick(Sender: TObject);
-    procedure StepClick(Sender: TObject);
-    procedure sbTypeClick(Sender: TObject);
-    procedure cbNoneClick(Sender: TObject);
     procedure cbMapFormatChange(Sender: TObject);
     procedure tbGoToClick(Sender: TObject);
     procedure sbUpClick(Sender: TObject);
@@ -116,6 +112,10 @@ type
     procedure BlockSelectAllExecute(Sender: TObject);
     procedure AddBookmarkClick(Sender: TObject);
     procedure AddressJumpListExecute(Sender: TObject);
+    procedure sbEditClick(Sender: TObject);
+    procedure sbDrawClick(Sender: TObject);
+    procedure sbStepClick(Sender: TObject);
+    procedure sbTypeClick(Sender: TObject);
   private
     { Private declarations }
   public
@@ -138,7 +138,7 @@ var
 
 implementation
 
-uses DTMmain, tmform, WorkSpace, palf, BitmapUtils, Math, BookmarkInputForm;
+uses DTMmain, tmform, WorkSpace, palf, BitmapUtils, Math, BookmarkInputForm, MetaTiles;
 
 {$R *.dfm}
 
@@ -264,8 +264,9 @@ begin
       DTM.Bank := TileTable[Data[CDPos].Index and $FF];
     end;
    end;
-   HexEd.SelectAll;
    stat1.Panels.Items[2].Text:= IntToHex(Data[CDPos].Address, 6) + ' : ' + IntToHex(DTM.Bank, 4);
+   DTM.DataMapDraw;
+   HexEd.SelectAll;
   end;
  end;
 end;
@@ -317,8 +318,7 @@ begin
   begin
     JumpList.Add(BookmarkName + ' :' + Address);
     JumpList.SaveToFile(FileName + '.jumplist');
-    InitJumpList;
-    tilemapform.InitJumpList;
+    InitAllJumpLists;
   end;
 end;
 
@@ -694,38 +694,42 @@ begin
   end;
 end;
 
-procedure Tdataform.DrawClick(Sender: TObject);
+
+
+
+procedure Tdataform.sbDrawClick(Sender: TObject);
 begin
-  bEdit:= cbNone.Down;
-  bDraw:= Draw.Down;
-  bStep:= Step.Down;
+  bEdit:= sbEdit.Down;
+  bDraw:= sbDraw.Down;
+  bStep:= sbStep.Down;
   bType:= sbType.Down;
 end;
 
-procedure Tdataform.StepClick(Sender: TObject);
+procedure Tdataform.sbEditClick(Sender: TObject);
 begin
-  bEdit:= cbNone.Down;
-  bDraw:= Draw.Down;
-  bStep:= Step.Down;
+  bEdit:= sbEdit.Down;
+  bDraw:= sbDraw.Down;
+  bStep:= sbStep.Down;
+  bType:= sbType.Down;
+end;
+
+
+
+procedure Tdataform.sbStepClick(Sender: TObject);
+begin
+  bEdit:= sbEdit.Down;
+  bDraw:= sbDraw.Down;
+  bStep:= sbStep.Down;
   bType:= sbType.Down;
 end;
 
 procedure Tdataform.sbTypeClick(Sender: TObject);
 begin
-  bEdit:= cbNone.Down;
-  bDraw:= Draw.Down;
-  bStep:= Step.Down;
+  bEdit:= sbEdit.Down;
+  bDraw:= sbDraw.Down;
+  bStep:= sbStep.Down;
   bType:= sbType.Down;
 end;
-
-procedure Tdataform.cbNoneClick(Sender: TObject);
-begin
-  bEdit:= cbNone.Down;
-  bDraw:= Draw.Down;
-  bStep:= Step.Down;
-  bType:= sbType.Down;
-end;
-
 
 procedure Tdataform.BlockCopyExecute(Sender: TObject);
 var
@@ -1056,6 +1060,7 @@ begin
   DTM.DataMapDraw();
 end;
 
+
 procedure Tdataform.tbGoToClick(Sender: TObject);
 begin
   DTM.GoTo2.Click();
@@ -1103,6 +1108,7 @@ begin
   DTM.DataMapDraw();
 end;
 
+
 procedure Tdataform.TileSelectionMouseDown(Sender: TObject;
   Button: TMouseButton; Shift: TShiftState; X, Y: Integer);
 begin
@@ -1119,9 +1125,9 @@ end;
 procedure Tdataform.FormActivate(Sender: TObject);
 begin
   bWorkSpace:= False;
-  bEdit:= cbNone.Down;
-  bDraw:= Draw.Down;
-  bStep:= Step.Down;
+  bEdit:= sbEdit.Down;
+  bDraw:= sbDraw.Down;
+  bStep:= sbStep.Down;
   bType:= sbType.Down;
   bSwapXY:= not SwapXY.Down;
     case databox.ItemIndex of

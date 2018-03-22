@@ -329,6 +329,7 @@ type
   function HexVal(s: string; var err: Boolean): LongInt;
   procedure IncPointer(var p: Pointer; increment: Integer);
   procedure SetSize(var P: BlockArr; Size: Integer);
+  procedure InitAllJumpLists;
 
 const
   Hchs: TCharset = ['H', 'h', '0'..'9', 'A'..'F', 'a'..'f', #8];
@@ -850,7 +851,7 @@ procedure TDjinnTileMapper.SetCurBank(n: integer);
 begin
   if ROMopened then
   begin
-    CurBank := n and TileMask;
+    CurBank := n;
   end;
 end;
 
@@ -1616,8 +1617,7 @@ begin
     BitReader.Free;
     BitWriter.Free;
     JumpList.Free;
-    dataform.InitJumpList;
-    tilemapform.InitJumpList;
+    InitAllJumpLists;
   end;
   JumpList:= TStringList.Create;
   ROMsize := FileSize(ROM);
@@ -1636,8 +1636,7 @@ begin
   if FileExists(S) then
   begin
     JumpList.LoadFromFile(S);
-    dataform.InitJumpList;
-    tilemapform.InitJumpList;
+    InitAllJumpLists;
   end;
   CloseFile(ROM);
   Saved := True;
@@ -1648,6 +1647,8 @@ begin
   tilemapform.TMapScroll.position := 0;
   DataScrollEnable;
   dataform.DataScroll.position := 0;
+  f_metatiles.MetaScrollEnable;
+  f_metatiles.MetaScroll.Position:= 0;
   romdatApos := 0;
  // if tilemapform.visible then
  //   tilemapform.tMapscroll.SetFocus;
@@ -1720,6 +1721,7 @@ begin
     seHeight.Enabled:= True;
     cbDirection.Enabled:= True;
     cbMapFormat.Enabled:= True;
+    tbBookmark.Enabled:= True;
   end;
   if TBLopened then
     InitDataEdit;
@@ -2296,6 +2298,13 @@ begin
     writeln(T, '/00');
     CloseFile(T);
   end;
+end;
+
+procedure InitAllJumpLists;
+begin
+  tilemapform.InitJumpList;
+  dataform.InitJumpList;
+  f_metatiles.InitJumpList;
 end;
 
 procedure TDjinnTileMapper.InitDataEdit;
