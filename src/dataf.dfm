@@ -16,6 +16,7 @@ object dataform: Tdataform
   Font.Style = []
   OldCreateOrder = False
   OnActivate = FormActivate
+  OnHide = FormHide
   OnPaint = FormPaint
   OnShow = FormShow
   PixelsPerInch = 96

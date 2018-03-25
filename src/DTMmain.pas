@@ -330,6 +330,7 @@ type
   procedure IncPointer(var p: Pointer; increment: Integer);
   procedure SetSize(var P: BlockArr; Size: Integer);
   procedure InitAllJumpLists;
+  procedure SetEffectivePosition(Control: TGraphicControl; ImageBounds: TRect; X, Y: Integer);
 
 const
   Hchs: TCharset = ['H', 'h', '0'..'9', 'A'..'F', 'a'..'f', #8];
@@ -442,6 +443,19 @@ begin
 end;
 
 
+{-------------------------------------------------------------------------------
+  Процедура: SetEffectivePosition
+  Автор:    Marat
+  Дата:  2018.03.25
+  Входные параметры: Rect: TRect; ImageBounds: TRect; X, Y: Integer
+  Результат:    Нет
+  Устанавливает точные координаты объекта с учётом свойства top и left
+-------------------------------------------------------------------------------}
+procedure SetEffectivePosition(Control: TGraphicControl; ImageBounds: TRect; X, Y: Integer);
+begin
+  Control.Left:= (ImageBounds.Left div TileWx2) * TileWx2 + (ImageBounds.Left mod TileWx2) + X;
+  Control.Top:=  (ImageBounds.Top div TileHx2) * TileHx2 +  (ImageBounds.Top mod TileHx2)  + Y;
+end;
 
 {-------------------------------------------------------------------------------
   Процедура: SetSize
@@ -3336,38 +3350,41 @@ begin
   if OpenBMP.Execute then
   begin
     v := tbitmap.Create;
-    v.LoadFromFile(OpenBMP.FileName);
-    TileNums := (v.Width div 8) * (v.Height div 8);
-    if TileNums > MAX_TILES_NUMS then
-      TileNums := MAX_TILES_NUMS;
+    try
+      v.LoadFromFile(OpenBMP.FileName);
+      TileNums := (v.Width div 8) * (v.Height div 8);
+      if TileNums > MAX_TILES_NUMS then
+        TileNums := MAX_TILES_NUMS;
 
-    if (ROMSize - DataPos) < (16 * 128 * bsz[TileType] * 8) then
-    begin
-      RowCount := (ROMSize - DataPos) div (16 * 8 * bsz[TileType]);
-      if (16 * RowCount) < TileNums then
-        TileNums := 16 * RowCount;
-    end;
-    I := curbank;
-    W := v.Width div 128;
+      if (ROMSize - DataPos) < (16 * 128 * bsz[TileType] * 8) then
+      begin
+        RowCount := (ROMSize - DataPos) div (16 * 8 * bsz[TileType]);
+        if (16 * RowCount) < TileNums then
+          TileNums := 16 * RowCount;
+      end;
+      I := curbank;
+      W := v.Width div 128;
 
-    for bb := 0 to TileNums - 1 do
-    begin
-      bTile.Canvas.CopyRect(Bounds(0, 0, tilew, tileh), v.Canvas, Bounds((bb mod 16) * tilew + ((bb div 16) and 1) * 128, (bb div (16 * W)) * tileh, tilew, tileh));
-      TileMap[0, 0] := Map[bb div 16][bb mod 16];
-      for yy := 0 to tileh - 1 do
-        for xx := 0 to tilew - 1 do
-        begin
-          tx := xx;
-          ty := yy;
-          UpdatePixel;
-        end;
+      for bb := 0 to TileNums - 1 do
+      begin
+        bTile.Canvas.CopyRect(Bounds(0, 0, tilew, tileh), v.Canvas, Bounds((bb mod 16) * tilew + ((bb div 16) and 1) * 128, (bb div (16 * W)) * tileh, tilew, tileh));
+        TileMap[0, 0] := Map[bb div 16][bb mod 16];
+        for yy := 0 to tileh - 1 do
+          for xx := 0 to tilew - 1 do
+          begin
+            tx := xx;
+            ty := yy;
+            UpdatePixel;
+          end;
+      end;
+      Curbank := I;
+      bank := I;
+      Saved := false;
+      Caption := Application.Title + ' - [' + ExtractFileName(fname) + ']' + SS[Saved];
+      DrawTileMap;
+    finally
+      v.Free;
     end;
-    Curbank := I;
-    v.Free;
-    bank := I;
-    Saved := false;
-    Caption := Application.Title + ' - [' + ExtractFileName(fname) + ']' + SS[Saved];
-    DrawTileMap;
   end;
 end;
 
@@ -4072,6 +4089,8 @@ begin
     dataform.Repaint;
   if WSForm.Block.Visible then
     WSForm.FormPaint(Self);
+  if TileMapForm.Block.Visible then
+    tilemapform.FormPaint(Self);
 end;
 
 initialization

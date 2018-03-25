@@ -18,6 +18,7 @@ type
     procedure tbSavePalClick(Sender: TObject);
     procedure tbOpenaPalClick(Sender: TObject);
     procedure FormCreate(Sender: TObject);
+    procedure FormHide(Sender: TObject);
   private
     { Private declarations }
   public
@@ -39,6 +40,11 @@ begin
   PalForm.PalImage.Height:= PALETTE_HEIGHT;
   PalForm.PalImage.Picture.Bitmap.Width:= PALETTE_WIDTH;
   PalForm.PalImage.Picture.Bitmap.Height:= PALETTE_HEIGHT;
+end;
+
+procedure TPalForm.FormHide(Sender: TObject);
+begin
+  DTM.N29.Checked := False;
 end;
 
 procedure TPalForm.FormMouseDown(Sender: TObject; Button: TMouseButton;

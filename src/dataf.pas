@@ -116,6 +116,7 @@ type
     procedure sbStepClick(Sender: TObject);
     procedure sbTypeClick(Sender: TObject);
     procedure FormPaint(Sender: TObject);
+    procedure FormHide(Sender: TObject);
   private
     { Private declarations }
   public
@@ -587,6 +588,10 @@ var
 begin
   if ROMopened and bMouseDown then
   begin
+    if (X0 = X1) or (Y0 = Y1) then
+    begin
+      bMouseDown:= False;
+    end;
     if X0 > X1 then
     begin
       Temp:= X0;
@@ -599,8 +604,7 @@ begin
       Y0:= Y1;
       Y1:= Temp;
     end;
-    Block.Left:= (DataMap.Left + X0) div TileWx2 * TileWx2 + (DataMap.Left mod TileWx2);
-    Block.Top:=  (DataMap.Top + Y0) div TileHx2 * TileHx2 +  (DataMap.Top mod  TileHx2);
+    SetEffectivePosition(Block, DataMap.BoundsRect, X0, Y0);
     W:= Abs(X1 - X0) div TileWx2;
     H:= Abs(Y1 - Y0) div TileHx2;
     Block.Width:= W * TileWx2;
@@ -792,16 +796,18 @@ begin
    TileSelection.Visible:= False;
    tbSelectTiles.Down := True;
    Block.Visible:= True;
-   Block.Left:= DataMap.Left;
-   Block.Top:= DataMap.Top;
+   SetEffectivePosition(Block, DataMap.BoundsRect, scrlbx1.HorzScrollBar.Position, scrlbx1.VertScrollBar.Position);
 
    Clipboard.Open;
-   Block.Picture.RegisterClipboardFormat(cf_BitMap,TBitmap);
-   Bitmap.LoadFromClipBoardFormat(cf_BitMap,ClipBoard.GetAsHandle(cf_Bitmap),0);
-   Block.Picture.Bitmap.Assign(Bitmap);
-   Block.Width:= Bitmap.Width;
-   Block.Height:= Bitmap.Height;
-
+   if Clipboard.HasFormat(CF_BITMAP) then
+   begin
+      Block.Picture.RegisterClipboardFormat(cf_BitMap,TBitmap);
+      Bitmap.LoadFromClipBoardFormat(cf_BitMap,ClipBoard.GetAsHandle(cf_Bitmap),0);
+      Block.Picture.Bitmap.Assign(Bitmap);
+      Block.Width:= Bitmap.Width;
+      Block.Height:= Bitmap.Height;
+   end else
+    Exit;
     if Clipboard.HasFormat(CF_DTMDATA) then
     begin
       Data:= Clipboard.GetAsHandle(CF_DTMDATA);
@@ -1161,6 +1167,11 @@ begin
 end;
 
 
+
+procedure Tdataform.FormHide(Sender: TObject);
+begin
+  DTM.n13.checked := False;
+end;
 
 procedure Tdataform.FormPaint(Sender: TObject);
 var

@@ -123,7 +123,7 @@ begin
     begin
       WorkSpace.Canvas.Rectangle(X0, Y0, X1, Y1);//Стираем прямоугольник
       //X1:= iMouseX; Y1:= iMouseY;
-      X1:= Succ(dmMouseX div TileWx2) * TileWx2; Y1:= Succ(dmMouseY div TileHx2) * TileHx2;
+      X1:= Succ(iMouseX div TileWx2) * TileWx2; Y1:= Succ(iMouseY div TileHx2) * TileHx2;
       WorkSpace.Canvas.Rectangle(X0, Y0, X1, Y1); //Рисуем на новом месте
       Stat1.Panels.Items[3].Text:= IntToStr(W) + ',' + IntToStr(H);
     end;
@@ -252,6 +252,10 @@ var
 begin
   if RomOpened and bMouseDown then
   begin
+    if (X0 = X1) or (Y0 = Y1) then
+    begin
+      bMouseDown:= False;
+    end;
     if X0 > X1 then
     begin
       Temp:= X0;
@@ -264,8 +268,7 @@ begin
       Y0:= Y1;
       Y1:= Temp;
     end;
-    Block.Left:= (WorkSpace.Left + X0) div TileWx2 * TileWx2 + (WorkSpace.Left mod TileWx2);
-    Block.Top:=  (WorkSpace.Top + Y0) div TileHx2 * TileHx2 +  (WorkSpace.Top mod  TileHx2);
+    SetEffectivePosition(Block, WorkSpace.BoundsRect, X0, Y0);
     W:= Abs(X1 - X0) div TileWx2;
     H:= Abs(Y1 - Y0) div TileHx2;
     Block.Width:= W * TileWx2;
@@ -511,11 +514,10 @@ begin
 
     if Length(WSMap) <> W * H then
     begin
-      //SetLength(Temp, Length(WSMap));
-//      for I := Low(WSMap) to High(WSMap) do
+//      SetLength(Temp, Length(WSMap));
+//      for I := 0 to High(WSMap) do
 //      begin
 //        Temp[I]:=  WSMap[I].Value;
-//        WSMap[I].Free;
 //      end;
       SetSize(WSMap, W * H);
       I:= 0;
@@ -525,7 +527,6 @@ begin
         begin
           for X := 0 to W - 1 do
           begin
- //           WSmap[I].Value:= Temp[I];
             WSMap[I].X:= X;
             WSMap[I].Y:= Y;
             WSMap[I].Address:= Y * W * PatternSize + X * PatternSize;
@@ -539,7 +540,6 @@ begin
         begin
           for X := 0 to W - 1 do
           begin
-//            WSmap[I].Value:= Temp[I];
             WSMap[I].X:= Y;
             WSMap[I].Y:= X;
             WSMap[I].Address:= X * H * PatternSize + Y * PatternSize;
@@ -637,15 +637,18 @@ begin
    TileSelection.Visible:= False;
    tbSelectTiles.Down := True;
    Block.Visible:= True;
-   Block.Left:= WorkSpace.Left;
-   Block.Top:= WorkSpace.Top;
+   SetEffectivePosition(Block, WorkSpace.BoundsRect, scrlbx1.HorzScrollBar.Position, scrlbx1.VertScrollBar.Position);
 
    Clipboard.Open;
-   Block.Picture.RegisterClipboardFormat(cf_BitMap,TBitmap);
-   Bitmap.LoadFromClipBoardFormat(cf_BitMap,ClipBoard.GetAsHandle(cf_Bitmap),0);
-   Block.Picture.Bitmap.Assign(Bitmap);
-   Block.Width:= Bitmap.Width;
-   Block.Height:= Bitmap.Height;
+   if Clipboard.HasFormat(CF_BITMAP) then
+   begin
+      Block.Picture.RegisterClipboardFormat(cf_BitMap,TBitmap);
+      Bitmap.LoadFromClipBoardFormat(cf_BitMap,ClipBoard.GetAsHandle(cf_Bitmap),0);
+      Block.Picture.Bitmap.Assign(Bitmap);
+      Block.Width:= Bitmap.Width;
+      Block.Height:= Bitmap.Height;
+   end else
+    Exit;
 
     if Clipboard.HasFormat(CF_DTMDATA) then
     begin
@@ -735,6 +738,7 @@ begin
       end;
     end;
     Block.Visible:= False;
+    DTM.DataMapDraw;
     WorkSpaceClick(Self);
   end;
 end;

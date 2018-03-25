@@ -16,6 +16,7 @@ object PalForm: TPalForm
   OldCreateOrder = False
   Position = poDefault
   OnCreate = FormCreate
+  OnHide = FormHide
   OnMouseDown = FormMouseDown
   PixelsPerInch = 96
   TextHeight = 13

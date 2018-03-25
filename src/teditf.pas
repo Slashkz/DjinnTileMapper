@@ -202,16 +202,19 @@ begin
   if OpenDialog1.Execute then
   begin
     Bitmap:= TBitmap.Create;
-    Bitmap.LoadFromFile(OpenDialog1.FileName);
-    if (Bitmap.Width > btile.Width) or (Bitmap.Height > btile.Height) then
-    begin
-      MessageDlg('Импортируемое изображение превышает допустимые пределы!', mtError, [mbOk], 0);
-      Exit;
+    try
+      Bitmap.LoadFromFile(OpenDialog1.FileName);
+      if (Bitmap.Width > btile.Width) or (Bitmap.Height > btile.Height) then
+      begin
+        MessageDlg('Импортируемое изображение превышает допустимые пределы!', mtError, [mbOk], 0);
+        Exit;
+      end;
+      bTile.Canvas.Draw(0, 0, Bitmap);
+      UpdateTile;
+      Saved := False ;
+    finally
+      Bitmap.Free;
     end;
-    bTile.Canvas.Draw(0, 0, Bitmap);
-    UpdateTile;
-    Saved := False ;
-    Bitmap.Free;
   end;
 end;
 
