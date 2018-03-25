@@ -49,6 +49,10 @@ type
     AddBookmark: TMenuItem;
     actlst1: TActionList;
     ActionAddressJumpList: TAction;
+    Block: TImage;
+    BlockCopy: TAction;
+    BlockPaste: TAction;
+    BlockSelectAll: TAction;
     procedure CodecboxChange(Sender: TObject);
     procedure CodecboxKeyPress(Sender: TObject; var Key: Char);
     procedure TileMapClick(Sender: TObject);
@@ -86,6 +90,8 @@ type
     procedure SetSize(Width, Height: Integer);
     procedure ActionAddressJumpListExecute(Sender: TObject);
     procedure AddBookmarkClick(Sender: TObject);
+    procedure BlockPasteExecute(Sender: TObject);
+    procedure BlockSelectAllExecute(Sender: TObject);
   private
     { Private declarations }
   public
@@ -620,6 +626,8 @@ begin
   pmJumpList.Items.Clear;
   pmJumpList.Items.Add(NewItem('Добавить закладку', 0, False, True, AddBookmarkClick, 0, 'MenuItem0'));
   pmJumpList.Items.Add(NewLine);
+  if JumpList.Count = 0 then
+    Exit;
   for I := 0 to JumpList.Count - 1 do
   begin
     with pmJumpList.Items do
@@ -662,6 +670,19 @@ begin
     InitAllJumpLists;
   end;
 end;
+
+
+
+procedure Ttilemapform.BlockSelectAllExecute(Sender: TObject);
+begin
+//
+end;
+
+procedure Ttilemapform.BlockPasteExecute(Sender: TObject);
+begin
+//
+end;
+
 
 procedure Ttilemapform.cbHVChange(Sender: TObject);
 begin

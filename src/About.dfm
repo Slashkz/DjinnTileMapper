@@ -19,11 +19,11 @@ object AboutForm: TAboutForm
   PixelsPerInch = 96
   TextHeight = 13
   object Label1: TLabel
-    Left = 36
+    Left = 33
     Top = 8
-    Width = 178
+    Width = 185
     Height = 20
-    Caption = 'Djinn Tile Mapper v2.0'
+    Caption = 'Djinn Tile Mapper 2.0.1'
     Font.Charset = DEFAULT_CHARSET
     Font.Color = clWindowText
     Font.Height = -16

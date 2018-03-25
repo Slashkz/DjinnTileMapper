@@ -5,8 +5,8 @@ interface
 uses
   Windows, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms,
   Dialogs, ImgList, ComCtrls, ExtCtrls, ToolWin, DTMmain, Buttons,
-  StdCtrls, Spin, Math, System.ImageList, Vcl.XPMan, clipbrd, Vcl.StdActns,
-  System.Actions, Vcl.ActnList;
+  StdCtrls, Spin, Math, System.ImageList, clipbrd, Vcl.StdActns,
+  System.Actions, Vcl.ActnList, GdiPlus;
 
 type
   TWSForm = class(TForm)
@@ -38,14 +38,11 @@ type
     TileSelection: TShape;
     Grid: TImage;
     Block: TImage;
-    BlockSelection: TShape;
     tbSelectTiles: TToolButton;
-    XPManifest1: TXPManifest;
     ActionList1: TActionList;
     BlockCopy: TAction;
     BlockPaste: TAction;
     BlockSelectAll: TAction;
-    procedure FormResize(Sender: TObject);
     procedure WorkSpaceMouseMove(Sender: TObject; Shift: TShiftState; X,
       Y: Integer);
     procedure WorkSpaceClick(Sender: TObject);
@@ -113,11 +110,6 @@ uses tmform, BitmapUtils;
 
 {$R *.dfm}
 
-procedure TWSForm.FormResize(Sender: TObject);
-begin
-//
-end;
-
 procedure TWSForm.WorkSpaceMouseMove(Sender: TObject; Shift: TShiftState;
   X, Y: Integer);
 var
@@ -129,37 +121,11 @@ begin
  begin
    if bMouseDown then
     begin
-      X1:= iMouseX; Y1:= iMouseY;
-      if X0 > X1 then
-      begin
-        Block.Left:= (WorkSpace.Left + X) div TileWx2 * TileWx2 + (WorkSpace.Left mod TileWx2);;
-        BlockSelection.Left:= Block.Left;
-      end;
-      if Y0 > Y1 then
-      begin
-        Block.Top:=  (WorkSpace.Top + Y) div TileHx2 * TileHx2 + (WorkSpace.Top mod  TileHx2);;
-        BlockSelection.Top:= Block.Top;
-      end;
-      W:=  1 + Abs(X1 - X0) div TileWx2;
-      H:=  1 + Abs(Y1 - Y0) div TileHx2;
-
-      if W = 1 then
-      begin
-        Block.Visible:= True;
-        BlockSelection.Visible:= True;
-      end;
+      WorkSpace.Canvas.Rectangle(X0, Y0, X1, Y1);//Стираем прямоугольник
+      //X1:= iMouseX; Y1:= iMouseY;
+      X1:= Succ(dmMouseX div TileWx2) * TileWx2; Y1:= Succ(dmMouseY div TileHx2) * TileHx2;
+      WorkSpace.Canvas.Rectangle(X0, Y0, X1, Y1); //Рисуем на новом месте
       Stat1.Panels.Items[3].Text:= IntToStr(W) + ',' + IntToStr(H);
-      BlockSelected:= W * H;
-      Block.Width:= W * TileWx2;
-      Block.Height:= H * TileHx2;
-      BlockSelection.Width:= Block.Width;
-      BlockSelection.Height:= Block.Height;
-      Block.Picture.Bitmap.Width:= W * TileWx2;
-      Block.Picture.Bitmap.Height:= H * TileHx2;
-      if (X0 > X1) or (Y0 > Y1) then
-        Block.Picture.Bitmap.Canvas.CopyRect(Bounds(0, 0, Block.Width, Block.Height), WorkSpace.Canvas, Bounds((X1 div TileWx2) * TileWx2, (Y1 div TileHx2) * TileHx2, W *TileWx2, H * TileHx2))
-      else
-        Block.Picture.Bitmap.Canvas.CopyRect(Bounds(0, 0, Block.Width, Block.Height), WorkSpace.Canvas, Bounds((X0 div TileWx2) * TileWx2, (Y0 div TileHx2) * TileHx2, W *TileWx2, H * TileHx2));
     end;
 
   stat1.Panels.Items[1].Text:= 'X, Y : ' + IntToHex(iMouseX div TileWx2, 3) + ' / ' + IntToHex(iMouseY div TileHx2, 3);
@@ -167,7 +133,7 @@ begin
   if bSwapXY then
     I  := iWSWidth * (iMouseY div TileHx2)  + (iMousex div TileWx2 )
   else
-     I := (iMouseY div TileHx2)  +   iWSHeight * (iMousex div TileWx2);
+    I := (iMouseY div TileHx2)  +   iWSHeight * (iMousex div TileWx2);
    stat1.Panels.Items[2].Text:= IntToHex(WSMap[I].Address, 6) + ' : ' + IntToHex(WSMap[I].Index, 4)
  end;
 end;
@@ -262,29 +228,56 @@ procedure TWSForm.WorkSpaceMouseDown(Sender: TObject; Button: TMouseButton;
 begin
   if (Button = mbLeft) and tbSelectTiles.Down  then
   begin
-    X0:= X;
-    Y0:= Y;
-    Block.Left:= (WorkSpace.Left + X) div TileWx2 * TileWx2 + (WorkSpace.Left mod TileWx2);
-    Block.Top:=  (WorkSpace.Top + Y) div TileHx2 * TileHx2 +  (WorkSpace.Top mod  TileHx2);
-    BlockSelection.Left:= Block.Left;
-    BlockSelection.Top:= Block.Top;
+    X0:= (X div TileWx2) * TileWx2;
+    Y0:= (Y div TileHx2) * TileHx2;
+    X1:= X0;
+    Y1:= Y0;
     Block.Visible:= False;
-    BlockSelection.Visible:= False;
     bMouseDown:= True;
+    with WorkSpace.Canvas do
+    begin
+      Brush.Style:= bsFDiagonal;
+      Brush.Color:= clBlack;
+      Pen.Style:= psDashDot;
+      Pen.Mode:= pmNotXor;
+      Pen.Color:= clBlack;
+    end;
   end;
 end;
 
 procedure TWSForm.WorkSpaceMouseUp(Sender: TObject; Button: TMouseButton;
   Shift: TShiftState; X, Y: Integer);
 var
-  I, J, Nums, XX, YY, W, H, PatternPos: Integer;
+  I, J, Nums, XX, YY, W, H, PatternPos, Temp: Integer;
 begin
-  if RomOpened and bMouseDown and Block.Visible then
+  if RomOpened and bMouseDown then
   begin
+    if X0 > X1 then
+    begin
+      Temp:= X0;
+      X0:= X1;
+      X1:= Temp;
+    end;
+    if Y0 > Y1 then
+    begin
+      Temp:= Y0;
+      Y0:= Y1;
+      Y1:= Temp;
+    end;
+    Block.Left:= (WorkSpace.Left + X0) div TileWx2 * TileWx2 + (WorkSpace.Left mod TileWx2);
+    Block.Top:=  (WorkSpace.Top + Y0) div TileHx2 * TileHx2 +  (WorkSpace.Top mod  TileHx2);
+    W:= Abs(X1 - X0) div TileWx2;
+    H:= Abs(Y1 - Y0) div TileHx2;
+    Block.Width:= W * TileWx2;
+    Block.Height:= H * TileHx2;
+    Block.Picture.Bitmap.Width:= W * TileWx2;
+    Block.Picture.Bitmap.Height:= H * TileHx2;
+    Block.Picture.Bitmap.Canvas.CopyRect(Bounds(0, 0, Block.Width, Block.Height), WorkSpace.Canvas, Bounds((X0 div TileWx2) * TileWx2, (Y0 div TileHx2) * TileHx2, W *TileWx2, H * TileHx2));
+    WorkSpace.Canvas.Rectangle(X0, Y0, X1, Y1);//Стираем прямоугольник
+    WorkSpace.Canvas.Pen.Mode:= pmCopy; //Восстанавливаем режим карандаша
+    Block.Visible:= True;
     XX:= Block.Left - WorkSpace.Left -  (WorkSpace.Left mod TileWx2);
     YY:= Block.Top - WorkSpace.Top   -  (WorkSpace.Top mod  TileHx2);
-    W:= Block.Width div TileWx2;  //Количиестов тайлов по горизонтали
-    H:= Block.Height div TileHx2; //Количество тайлов по вертикали
     Nums:= W * H; // Определяем кол-во выделенных тайлов
     SetSize(SelectTiles, Nums);
     if bSwapXY then
@@ -420,7 +413,13 @@ begin
   if tbSelectTiles.Down = false then
   begin
     Block.Visible:= False;
-    BlockSelection.Visible:= False;
+    WorkSpace.Cursor:= crDefault;
+    Grid.Cursor:= crDefault;
+  end
+  else
+  begin
+    WorkSpace.Cursor:= crCross;
+    Grid.Cursor:= crCross;
   end;
 end;
 
@@ -623,7 +622,6 @@ begin
     raise;
   end;
     Block.Visible:= False;
-    BlockSelection.Visible:= False;
   end;
 end;
 
@@ -639,11 +637,8 @@ begin
    TileSelection.Visible:= False;
    tbSelectTiles.Down := True;
    Block.Visible:= True;
-   BlockSelection.Visible:= True;
    Block.Left:= WorkSpace.Left;
    Block.Top:= WorkSpace.Top;
-   BlockSelection.Left:= Block.Left;
-   BlockSelection.Top:= Block.Top;
 
    Clipboard.Open;
    Block.Picture.RegisterClipboardFormat(cf_BitMap,TBitmap);
@@ -651,8 +646,6 @@ begin
    Block.Picture.Bitmap.Assign(Bitmap);
    Block.Width:= Bitmap.Width;
    Block.Height:= Bitmap.Height;
-   BlockSelection.Width:= Bitmap.Width;
-   BlockSelection.Height:= Bitmap.Height;
 
     if Clipboard.HasFormat(CF_DTMDATA) then
     begin
@@ -661,11 +654,6 @@ begin
       try
         // Obtain the size of the data to retrieve
         BlockCounts:= GlobalSize(Data) div SizeOf(Word);
-        // Copy the data to the TDataRec field
-//        for I := Low(SelectTiles) to High(SelectTiles) do
-//        begin
-//          SelectTiles[I].Free;
-//        end;
         SetSize(SelectTiles, BlockCounts);
         for I := Low(SelectTiles) to High(SelectTiles) do
         begin
@@ -691,12 +679,9 @@ begin
     WorkSpaceMouseDown(Self, mbLeft, [ssLeft], 0, 0);
     Block.Left:= 0;
     Block.Top:= 0;
-    BlockSelection.Left:= Block.Left;
-    BlockSelection.Top:= Block.Top;
     WorkSpaceMouseMove(Self, [ssLeft], WorkSpace.Width - 1, Workspace.Height - 1);
     WorkSpaceMouseUp(Self, mbLeft, [ssLeft], WorkSpace.Width div 2, Workspace.Height div 2);
     Block.Visible:= True;
-    BlockSelection.Visible:= True;
   end;
 
 end;
@@ -750,7 +735,6 @@ begin
       end;
     end;
     Block.Visible:= False;
-    BlockSelection.Visible:= False;
     WorkSpaceClick(Self);
   end;
 end;
@@ -772,8 +756,6 @@ begin
     begin
       Block.Top:= NewBlockPos.Y;
     end;
-    BlockSelection.Left:= Block.Left;
-    BlockSelection.Top:= Block.Top;
   end;
 end;
 
@@ -944,13 +926,25 @@ begin
     Grid.Picture.Bitmap.Height:= WorkSpace.Height;
     GridDraw(Grid.Picture.Bitmap, TileWx2, TileHx2, clHotLight);
     GridDraw(Grid.Picture.Bitmap, TileWx2 * 8, TileHx2 * 8, clSkyBlue);
-  end;    
+  end;
+  if ROMopened then
+  begin
+    bWorkSpace:= True;
+    DTM.DataMapDraw;
+  end;
 end;
 
 procedure TWSForm.FormPaint(Sender: TObject);
+var
+  Graphics: IGPGraphics;
 begin
-if ROMopened then
-  DTM.DataMapDraw();
+  if Block.Visible then
+  begin
+    Graphics:= TGPGraphics.Create(Block.Canvas.Handle);
+    Graphics.DrawRectangle(WhitePen, 0, 0, Block.Width-1, Block.Height-1);
+    Graphics.DrawRectangle(BorderPen, 0, 0, Block.Width-1, Block.Height-1);
+    Block.Repaint;
+  end;
 end;
 
 end.

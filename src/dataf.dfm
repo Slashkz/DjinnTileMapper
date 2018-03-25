@@ -4,10 +4,11 @@ object dataform: Tdataform
   HorzScrollBar.Visible = False
   VertScrollBar.Visible = False
   BorderIcons = [biSystemMenu, biMinimize]
-  Caption = #1058#1077#1082#1089#1090', '#1082#1086#1076' '#1080' '#1087#1088#1086#1095#1080#1081' '#1084#1091#1089#1086#1088
+  Caption = #1050#1072#1088#1090#1072' '#1090#1072#1081#1083#1086#1074
   ClientHeight = 575
   ClientWidth = 547
   Color = clBtnFace
+  DoubleBuffered = True
   Font.Charset = DEFAULT_CHARSET
   Font.Color = clWindowText
   Font.Height = -11
@@ -15,6 +16,7 @@ object dataform: Tdataform
   Font.Style = []
   OldCreateOrder = False
   OnActivate = FormActivate
+  OnPaint = FormPaint
   OnShow = FormShow
   PixelsPerInch = 96
   TextHeight = 13
@@ -805,15 +807,6 @@ object dataform: Tdataform
         Width = 105
         Height = 105
         Cursor = crSizeAll
-        Visible = False
-      end
-      object BlockSelection: TShape
-        Left = 157
-        Top = 56
-        Width = 65
-        Height = 65
-        Cursor = crSizeAll
-        Brush.Style = bsFDiagonal
         Visible = False
         OnMouseDown = BlockSelectionMouseDown
         OnMouseMove = BlockSelectionMouseMove

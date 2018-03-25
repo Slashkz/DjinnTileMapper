@@ -14,6 +14,7 @@ object f_metatiles: Tf_metatiles
   OldCreateOrder = False
   OnClose = FormClose
   OnCreate = FormCreate
+  OnHide = FormHide
   OnShow = FormShow
   PixelsPerInch = 96
   TextHeight = 13
@@ -25,7 +26,6 @@ object f_metatiles: Tf_metatiles
     Align = alClient
     TabOrder = 0
     OnClick = scrlbx1Click
-    ExplicitWidth = 465
     object MapImage: TImage
       Left = 0
       Top = 0
@@ -83,7 +83,6 @@ object f_metatiles: Tf_metatiles
     Images = DjinnTileMapper.ToolBarHot
     TabOrder = 1
     Transparent = False
-    ExplicitWidth = 465
     object tbGoTo: TToolButton
       Left = 0
       Top = 0
@@ -223,7 +222,6 @@ object f_metatiles: Tf_metatiles
       item
         Width = 50
       end>
-    ExplicitWidth = 465
   end
   object MetaScroll: TScrollBar
     Left = 497
@@ -235,8 +233,6 @@ object f_metatiles: Tf_metatiles
     PageSize = 0
     TabOrder = 3
     OnChange = MetaScrollChange
-    ExplicitLeft = 503
-    ExplicitTop = 23
   end
   object OpenDialog1: TOpenDialog
     Left = 72

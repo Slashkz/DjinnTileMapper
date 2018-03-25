@@ -8,7 +8,7 @@ uses
   ComCtrls,
   ToolWin,
   ImgList, System.ImageList, System.Actions, Vcl.ActnList, Clipbrd,
-  Vcl.StdActns, Vcl.Menus;
+  Vcl.StdActns, Vcl.Menus, GdiPlus;
 
 type
   Tdataform = class(TForm)
@@ -51,7 +51,6 @@ type
     Grid: TImage;
     TileSelection: TShape;
     Block: TImage;
-    BlockSelection: TShape;
     BlockCopy: TAction;
     BlockSelectAll: TAction;
     tbJumpList: TToolButton;
@@ -116,6 +115,7 @@ type
     procedure sbDrawClick(Sender: TObject);
     procedure sbStepClick(Sender: TObject);
     procedure sbTypeClick(Sender: TObject);
+    procedure FormPaint(Sender: TObject);
   private
     { Private declarations }
   public
@@ -161,7 +161,6 @@ begin
  Bitmap := TBitMap.Create;
  try
    Block.Visible:= True;
-   BlockSelection.Visible:= True;
    Block.Picture.RegisterClipboardFormat(cf_BitMap,TBitmap);
    Bitmap.LoadFromClipBoardFormat(cf_BitMap, ClipBoard.GetAsHandle(cf_Bitmap),0);
    Canvas.draw(0,0,Bitmap);
@@ -292,6 +291,8 @@ begin
   pmJumpList.Items.Clear;
   pmJumpList.Items.Add(NewItem('Добавить закладку', 0, False, True, AddBookmarkClick, 0, 'MenuItem0'));
   pmJumpList.Items.Add(NewLine);
+  if JumpList.Count = 0 then
+  Exit;
   for I := 0 to JumpList.Count - 1 do
   begin
     with pmJumpList.Items do
@@ -444,58 +445,6 @@ begin
 end;
 
 
-procedure Tdataform.DataMapMouseMove(Sender: TObject; Shift: TShiftState;
-  X, Y: Integer);
-var
-  I: Integer;
-begin
- dmMouseX := Min(X, DataMap.Width - 1);
- dmMouseY := Min(Y, DataMap.Height - 1);
- If ROMopened then
- begin
-  if bMouseDown then
-  begin
-    X1:= dmMouseX; Y1:= dmMouseY;
-    if X0 > X1 then
-    begin
-      Block.Left:= (DataMap.Left + X) div TileWx2 * TileWx2 + (DataMap.Left mod TileWx2);;
-      BlockSelection.Left:= Block.Left;
-    end;
-    if Y0 > Y1 then
-    begin
-      Block.Top:=  (DataMap.Top + Y) div TileHx2 * TileHx2 + (DataMap.Top mod  TileHx2);;
-      BlockSelection.Top:= Block.Top;
-    end;
-    W:=  1 + Abs(X1 - X0) div TileWx2;
-    H:=  1 + Abs(Y1 - Y0) div TileHx2;
-    stat1.Panels.Items[3].Text:= IntToStr(W) + ',' + IntToStr(H);
-    if W = 1 then
-    begin
-      Block.Visible:= True;
-      BlockSelection.Visible:= True;
-    end;
-
-    BlockSelected:= W * H;
-    Block.Width:= W * TileWx2;
-    Block.Height:= H * TileHx2;
-    BlockSelection.Width:= Block.Width;
-    BlockSelection.Height:= Block.Height;
-    Block.Picture.Bitmap.Width:= W * TileWx2;
-    Block.Picture.Bitmap.Height:= H * TileHx2;
-    if (X0 > X1) or (Y0 > Y1) then
-      Block.Picture.Bitmap.Canvas.CopyRect(Bounds(0, 0, Block.Width, Block.Height), DataMap.Canvas, Bounds((X1 div TileWx2) * TileWx2, (Y1 div TileHx2) * TileHx2, W *TileWx2, H * TileHx2))
-    else
-      Block.Picture.Bitmap.Canvas.CopyRect(Bounds(0, 0, Block.Width, Block.Height), DataMap.Canvas, Bounds((X0 div TileWx2) * TileWx2, (Y0 div TileHx2) * TileHx2, W *TileWx2, H * TileHx2));
-  end;
-   if bSwapXY then
-    I  := DTM.dWidth * (dmMouseY div TileHx2)  + (dmMousex div TileWx2 )
-  else
-    I := (dmMouseY div TileHx2)  +   DTM.dHeight * (dmMousex div TileWx2);
-  stat1.Panels.Items[2].Text:= IntToHex(Data[I].Address, 6) + ' : ' + IntToHex(Data[I].Index, 4);
-  stat1.Panels.Items[1].Text:= 'X, Y : ' + IntToHex(dmMouseX div TileWx2, 3) + ' / ' + IntToHex(dmMouseY div TileWx2, 3);
- end;
-end;
-
 procedure Tdataform.SwapXYClick(Sender: TObject);
 var
   X, Y, I: Integer;
@@ -578,6 +527,34 @@ begin
   end;
 end;
 
+
+
+procedure Tdataform.DataMapMouseMove(Sender: TObject; Shift: TShiftState;
+  X, Y: Integer);
+var
+  I: Integer;
+begin
+ dmMouseX := Min(X, DataMap.Width - 1);
+ dmMouseY := Min(Y, DataMap.Height - 1);
+
+ If ROMopened then
+ begin
+  if bMouseDown then
+  begin
+    DataMap.Canvas.Rectangle(X0, Y0, X1, Y1);
+    X1:= Succ(dmMouseX div TileWx2) * TileWx2; Y1:= Succ(dmMouseY div TileHx2) * TileHx2;
+    stat1.Panels.Items[3].Text:= IntToStr(W) + ',' + IntToStr(H);
+    DataMap.Canvas.Rectangle(X0, Y0, X1, Y1);
+  end;
+   if bSwapXY then
+    I  := DTM.dWidth * (dmMouseY div TileHx2)  + (dmMousex div TileWx2 )
+  else
+    I := (dmMouseY div TileHx2)  +   DTM.dHeight * (dmMousex div TileWx2);
+  stat1.Panels.Items[2].Text:= IntToHex(Data[I].Address, 6) + ' : ' + IntToHex(Data[I].Index, 4);
+  stat1.Panels.Items[1].Text:= 'X, Y : ' + IntToHex(dmMouseX div TileWx2, 3) + ' / ' + IntToHex(dmMouseY div TileWx2, 3);
+ end;
+end;
+
 procedure Tdataform.DataMapMouseDown(Sender: TObject; Button: TMouseButton;
   Shift: TShiftState; X, Y: Integer);
 var
@@ -585,34 +562,58 @@ var
 begin
   if (Button = mbLeft) and tbSelectTiles.Down  then
   begin
-    X0:= X;
-    Y0:= Y;
+    DataMap.Cursor:= crCross;
+    X0:= (X div TileWx2) * TileWx2;
+    Y0:= (Y div TileHx2) * TileHx2;
+    X1:= X0;
+    Y1:= Y0;
     Block.Visible:= False;
-    BlockSelection.Visible:= False;
-    Block.Left:= (DataMap.Left + X) div TileWx2 * TileWx2 + (DataMap.Left mod TileWx2);
-    Block.Top:=  (DataMap.Top + Y) div TileHx2 * TileHx2 +  (DataMap.Top mod  TileHx2);
-    BlockSelection.Left:= Block.Left;
-    BlockSelection.Top:= Block.Top;
     bMouseDown:= True;
+    with DataMap.Canvas do
+    begin
+      Brush.Style:= bsFDiagonal;
+      Brush.Color:= clBlack;
+      Pen.Style:= psDashDot;
+      Pen.Color:= clBlack;
+      Pen.Mode:= pmNotXor;
+    end;
   end;
 end;
 
 procedure Tdataform.DataMapMouseUp(Sender: TObject; Button: TMouseButton;
   Shift: TShiftState; X, Y: Integer);
 var
-  I, J, Nums, XX, YY, W, H, PatternPos: Integer;
+  I, J, Nums, XX, YY, W, H, PatternPos, Temp: Integer;
 begin
-  if RomOpened and bMouseDown and Block.Visible then
+  if ROMopened and bMouseDown then
   begin
+    if X0 > X1 then
+    begin
+      Temp:= X0;
+      X0:= X1;
+      X1:= Temp;
+    end;
+    if Y0 > Y1 then
+    begin
+      Temp:= Y0;
+      Y0:= Y1;
+      Y1:= Temp;
+    end;
+    Block.Left:= (DataMap.Left + X0) div TileWx2 * TileWx2 + (DataMap.Left mod TileWx2);
+    Block.Top:=  (DataMap.Top + Y0) div TileHx2 * TileHx2 +  (DataMap.Top mod  TileHx2);
+    W:= Abs(X1 - X0) div TileWx2;
+    H:= Abs(Y1 - Y0) div TileHx2;
+    Block.Width:= W * TileWx2;
+    Block.Height:= H * TileHx2;
+    Block.Picture.Bitmap.Width:= W * TileWx2;
+    Block.Picture.Bitmap.Height:= H * TileHx2;
+    Block.Picture.Bitmap.Canvas.CopyRect(Bounds(0, 0, Block.Width, Block.Height), DataMap.Canvas, Bounds((X0 div TileWx2) * TileWx2, (Y0 div TileHx2) * TileHx2, W *TileWx2, H * TileHx2));
+    DataMap.Canvas.Rectangle(X0, Y0, X1, Y1);//Стираем прямоугольник
+    DataMap.Canvas.Pen.Mode:= pmCopy; //Восстанавливаем режим карандаша
+    Block.Visible:= True;
     XX:= Block.Left - DataMap.Left -  (DataMap.Left mod TileWx2);
     YY:= Block.Top - DataMap.Top   -  (DataMap.Top mod  TileHx2);
-    W:= Block.Width div TileWx2;  //Количиестов тайлов по горизонтали
-    H:= Block.Height div TileHx2; //Количество тайлов по вертикали
     Nums:= W * H; // Определяем кол-во выделенных тайлов
-//    for I := Low(SelectTiles) to High(SelectTiles) do
-//    begin
-//      SelectTiles[I].Free;
-//    end;
     SetSize(SelectTiles, Nums);
     if bSwapXY then
     begin
@@ -621,8 +622,6 @@ begin
       begin
         for J := 0 to W - 1 do
           begin
-            //Move(Data[PatternPos + J].Index, SelectTiles[I * W * PatternSize + J * PatternSize], PatternSize);
-            //SelectTiles[I * W + J]:= TBlock.Create;
             SelectTiles[I * W + J].Value:= Data[PatternPos + J].Value;
           end;
           Inc(PatternPos, DTM.dWidth);
@@ -635,15 +634,14 @@ begin
       begin
         for J := 0 to H - 1 do
           begin
-            //SelectTiles[I * H + J]:= TBlock.Create;
             SelectTiles[I * H + J].Value:= Data[PatternPos + J].Value;
           end;
           Inc(PatternPos, DTM.dHeight);
       end;
     end;
-
+    bMouseDown:= False;
   end;
-  bMouseDown:= False;
+
 end;
 
 procedure Tdataform.PrtClick(Sender: TObject);
@@ -779,7 +777,6 @@ begin
     raise;
   end;
     Block.Visible:= False;
-    BlockSelection.Visible:= False;
   end;
 end;
 
@@ -795,11 +792,8 @@ begin
    TileSelection.Visible:= False;
    tbSelectTiles.Down := True;
    Block.Visible:= True;
-   BlockSelection.Visible:= True;
    Block.Left:= DataMap.Left;
    Block.Top:= DataMap.Top;
-   BlockSelection.Left:= Block.Left;
-   BlockSelection.Top:= Block.Top;
 
    Clipboard.Open;
    Block.Picture.RegisterClipboardFormat(cf_BitMap,TBitmap);
@@ -807,8 +801,6 @@ begin
    Block.Picture.Bitmap.Assign(Bitmap);
    Block.Width:= Bitmap.Width;
    Block.Height:= Bitmap.Height;
-   BlockSelection.Width:= Bitmap.Width;
-   BlockSelection.Height:= Bitmap.Height;
 
     if Clipboard.HasFormat(CF_DTMDATA) then
     begin
@@ -847,12 +839,9 @@ begin
     DataMapMouseDown(Self, mbLeft, [ssLeft], 0, 0);
     Block.Left:= 0;
     Block.Top:= 0;
-    BlockSelection.Left:= Block.Left;
-    BlockSelection.Top:= Block.Top;
     DataMapMouseMove(Self, [ssLeft], DataMap.Width - 1, DataMap.Height - 1);
     DataMapMouseUp(Self, mbLeft, [ssLeft], DataMap.Width div 2, DataMap.Height div 2);
     Block.Visible:= True;
-    BlockSelection.Visible:= True;
   end;
 end;
 
@@ -962,8 +951,8 @@ begin
       DTM.DrawTileMap();
     end;
     Block.Visible:= False;
-    BlockSelection.Visible:= False;
     bTileMapChanged:= True;
+    DTM.DataMapDraw;
     DataMapClick(Self);
   end;
 end;
@@ -985,8 +974,6 @@ begin
     begin
       Block.Top:= NewBlockPos.Y;
     end;
-    BlockSelection.Left:= Block.Left;
-    BlockSelection.Top:= Block.Top;
   end;
 end;
 
@@ -1092,7 +1079,13 @@ begin
   if tbSelectTiles.Down = false then
   begin
     Block.Visible:= False;
-    BlockSelection.Visible:= False;
+    DataMap.Cursor:= crDefault;
+    Grid.Cursor:= crDefault;
+  end
+  else
+  begin
+    DataMap.Cursor:= crCross;
+    Grid.Cursor:= crCross;
   end;
 end;
 
@@ -1168,6 +1161,19 @@ begin
 end;
 
 
+
+procedure Tdataform.FormPaint(Sender: TObject);
+var
+  Graphics: IGPGraphics;
+begin
+  if Block.Visible then
+  begin
+    Graphics:= TGPGraphics.Create(Block.Canvas.Handle);
+    Graphics.DrawRectangle(WhitePen, 0, 0, Block.Width-1, Block.Height-1);
+    Graphics.DrawRectangle(BorderPen, 0, 0, Block.Width-1, Block.Height-1);
+    Block.Repaint;
+  end;
+end;
 
 procedure Tdataform.FormShow(Sender: TObject);
 begin

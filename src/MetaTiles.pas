@@ -57,6 +57,7 @@ type
       Y: Integer);
     procedure ActionAddressJumpListExecute(Sender: TObject);
     procedure AddBookmarkClick(Sender: TObject);
+    procedure FormHide(Sender: TObject);
   private
     { Private declarations }
     FDataPosition: Integer;
@@ -124,6 +125,8 @@ begin
   pmJumpList.Items.Clear;
   pmJumpList.Items.Add(NewItem('Добавить закладку', 0, False, True, AddBookmarkClick, 0, 'MenuItem0'));
   pmJumpList.Items.Add(NewLine);
+  if JumpList.Count = 0 then
+    Exit;
   for I := 0 to JumpList.Count - 1 do
   begin
     with pmJumpList.Items do
@@ -352,6 +355,12 @@ begin
   GridDraw(Grid.Picture.Bitmap, 8 * MTWidth * tilew, 8 * MTHeight * tileh, clSkyBlue);
 end;
 
+procedure Tf_metatiles.FormHide(Sender: TObject);
+begin
+  DTM.UpdateData(romDataPos);
+  DTM.DataMapDraw;
+end;
+
 procedure Tf_metatiles.FormShow(Sender: TObject);
 begin
   if ROMopened then
@@ -368,6 +377,7 @@ begin
   MTHeight:= seHeight.Value;
   TileSelection.Width:= TileWx2 * MTWidth;
   TileSelection.Height:= TileHx2 * MTHeight;
+  MetaScrollEnable;
   ChangeMap(MTWidth, MTHeight);
   MapImage.Width:= MapWidth * MTWidth * TileWx2;
   MapImage.Height:= MapHeight * MTHeight * TileHx2;
@@ -383,7 +393,6 @@ begin
     begin
       Canvas.Brush.Color:= clWhite;
       Canvas.FillRect(Canvas.ClipRect);
-      //DrawGrid(Grid.Picture.Bitmap, MTWidth * tilewX2, MTHeight * tilehx2,MTWidth * tilewX2 * 8, MTHeight * tilehx2 * 8);
       GridDraw(Grid.Picture.Bitmap, MTWidth * tilewX2, MTHeight * tilehx2, clHotLight);
       GridDraw(Grid.Picture.Bitmap, 8 * MTWidth * tilewx2, 8 * MTHeight * tilehx2, clSkyBlue);
     end;

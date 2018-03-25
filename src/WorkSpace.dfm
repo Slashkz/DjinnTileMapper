@@ -7,6 +7,7 @@ object WSForm: TWSForm
   ClientHeight = 538
   ClientWidth = 520
   Color = clBtnFace
+  DoubleBuffered = True
   Font.Charset = DEFAULT_CHARSET
   Font.Color = clWindowText
   Font.Height = -11
@@ -17,7 +18,6 @@ object WSForm: TWSForm
   OnClose = FormClose
   OnCreate = FormCreate
   OnPaint = FormPaint
-  OnResize = FormResize
   OnShow = FormShow
   PixelsPerInch = 96
   TextHeight = 13
@@ -31,6 +31,7 @@ object WSForm: TWSForm
     HotImages = DjinnTileMapper.ToolBarHot
     Images = DjinnTileMapper.ToolBarCold
     TabOrder = 0
+    Transparent = False
     Wrapable = False
     object tbImport: TToolButton
       Left = 0
@@ -108,7 +109,6 @@ object WSForm: TWSForm
       Top = 0
       Width = 24
       Height = 22
-      Flat = True
       Glyph.Data = {
         D6050000424DD605000000000000360000002800000017000000140000000100
         180000000000A005000000000000000000000000000000000000B370DBB370DB
@@ -164,7 +164,6 @@ object WSForm: TWSForm
       Top = 0
       Width = 24
       Height = 22
-      Flat = True
       Glyph.Data = {
         D6050000424DD605000000000000360000002800000017000000140000000100
         180000000000A005000000000000000000000000000000000000B370DBB370DB
@@ -290,15 +289,7 @@ object WSForm: TWSForm
       Top = 176
       Width = 105
       Height = 105
-      Visible = False
-    end
-    object BlockSelection: TShape
-      Left = 17
-      Top = 200
-      Width = 65
-      Height = 65
       Cursor = crSizeAll
-      Brush.Style = bsFDiagonal
       Visible = False
       OnMouseDown = BlockSelectionMouseDown
       OnMouseMove = BlockSelectionMouseMove
@@ -316,6 +307,7 @@ object WSForm: TWSForm
     HotImages = DjinnTileMapper.ToolBarHot
     Images = DjinnTileMapper.ToolBarCold
     TabOrder = 3
+    Transparent = False
     object tbSwap: TSpeedButton
       Left = 0
       Top = 0
@@ -599,10 +591,6 @@ object WSForm: TWSForm
     Title = #1057#1086#1093#1088#1072#1085#1080#1090#1100' Bitmap'
     Left = 262
     Top = 255
-  end
-  object XPManifest1: TXPManifest
-    Left = 424
-    Top = 162
   end
   object ActionList1: TActionList
     Left = 368

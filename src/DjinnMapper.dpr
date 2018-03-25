@@ -29,7 +29,7 @@ uses
 
 begin
   Application.Initialize;
-  Application.Title := 'Djinn Tile Mapper v 2.0';
+  Application.Title := 'Djinn Tile Mapper 2.0.1';
   Application.CreateForm(TDjinnTileMapper, DTM);
   Application.CreateForm(TInputForm, InputForm);
   Application.CreateForm(TSearchForm, SearchForm);

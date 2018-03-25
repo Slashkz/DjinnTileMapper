@@ -6,7 +6,7 @@ uses
   Windows, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms,
   Dialogs, ExtCtrls, Menus, ColorGrd, StdCtrls, ComCtrls, Gauges, ToolWin,
   ImgList, Buttons, Spin, InputBox, ActnList, BitmapUtils, StdActns, Math,
-  RTLConsts, System.ImageList, System.Actions, About;
+  RTLConsts, System.ImageList, System.Actions, About, GdiPlus;
 
 type
   TTile2bit = array[0..7, 0..1] of Byte;
@@ -179,10 +179,8 @@ type
     BMP1: TMenuItem;
     BMP2: TMenuItem;
     N23: TMenuItem;
-    vstrfont: TMenuItem;
     N24: TMenuItem;
     N25: TMenuItem;
-    N26: TMenuItem;
     N27: TMenuItem;
     N28: TMenuItem;
     N29: TMenuItem;
@@ -194,6 +192,7 @@ type
     ToolbarDisabled: TImageList;
     ShowMetatilesMap: TMenuItem;
     HexNums: TImageList;
+    tmr1: TTimer;
     procedure FormShow(Sender: TObject);
     procedure ExitItemClick(Sender: TObject);
     procedure Fill(var Im: TImage; Clr: TColor);
@@ -236,7 +235,6 @@ type
     procedure optItmClick(Sender: TObject);
     procedure ImportBitmap(Sender: TObject);
     procedure ExportBitmap(Sender: TObject);
-    procedure vstrfontClick(Sender: TObject);
     procedure N20Click(Sender: TObject);
     procedure N24Click(Sender: TObject);
     procedure N25Click(Sender: TObject);
@@ -246,6 +244,8 @@ type
     procedure ShowWorkSpaceClick(Sender: TObject);
     procedure ShowMetatilesMapClick(Sender: TObject);
     procedure AboutItemClick(Sender: TObject);
+    procedure FormCreate(Sender: TObject);
+    procedure tmr1Timer(Sender: TObject);
   private
     FMapFormat: TMapFormat;
     FPalette: array[Byte] of TColor;
@@ -426,6 +426,8 @@ var
   RBts: LongInt;
   CF_DTMDATA: Word; //Собственный формат для буфера обмена
   JumpList: TStringList;
+
+  BorderPen, WhitePen: IGPPen;
 implementation
 
 uses
@@ -1327,7 +1329,7 @@ procedure TDjinnTileMapper.SetPos(P: LongInt);
 begin
   DataPos := P;
   Caption := Application.Title + ' - [' + ExtractFileName(fname) + ']' + SS[Saved];
-  TileMapForm.Caption := 'Карта тайлов ' + IntToHex(DataPos, 6);
+  TileMapForm.Caption := 'Тайлы ' + IntToHex(DataPos, 6);
   TileMapForm.stat1.Panels.Items[0].Text := 'Адрес : ' + IntToHex(DataPos, 6) + ' / ' + IntToHex(ROMSize, 6);
   DrawTileMap;
 end;
@@ -1341,7 +1343,7 @@ procedure TDjinnTileMapper.SetROMPos(P: LongInt);
 begin
   romDataPos := P;
   UpdateData(P);
-  dataform.Caption := 'Текст, код и прочий мусор - [' + IntToHex(P, 8) + ' / ' + inttohex(romsize, 8) + ']';
+  dataform.Caption := 'Карта тайлов - [' + IntToHex(P, 8) + ' / ' + inttohex(romsize, 8) + ']';
   DataScrollEnable;
   DataMapDraw;
 end;
@@ -1729,7 +1731,6 @@ var
 begin
   if OpenRom.Execute then
   begin
-    vstrfont.Checked := false;
     fname := OpenRom.FileName;
     e := UpperCase(ExtractFileExt(FName));
     if e = '.NES' then
@@ -1784,6 +1785,14 @@ begin
   btile.free;
 end;
 
+procedure TDjinnTileMapper.FormCreate(Sender: TObject);
+begin
+  BorderPen:= TGPPen.Create($FF000000, 1);
+  WhitePen:= TGPPen.Create($FFFFFFFF, 1);
+  BorderPen.SetDashPattern([4, 4]);
+  BorderPen.DashOffset:= 0;
+end;
+
 function HexVal(s: string; var err: Boolean): LongInt;
 
   function sign(h: Char): Byte;
@@ -1824,7 +1833,7 @@ var
   s: string;
   v: LongInt;
 begin
-  s := UpperCase(InputForm.Inputbx(Application.Title, 'Перейти на позицию в карте тайлов:', hchs, 10));
+  s := UpperCase(InputForm.Inputbx(Application.Title, 'Перейти на позицию:', hchs, 10));
   if s = '' then
     Exit;
   if s[1] = 'H' then
@@ -3253,22 +3262,22 @@ end;
 
 procedure TDjinnTileMapper.N4Click(Sender: TObject);
 begin
- //tilemapform.leftbtnclick(tilemapform.leftbtn);
+ tilemapform.tbBlockMinus1.Click;
 end;
 
 procedure TDjinnTileMapper.N5Click(Sender: TObject);
 begin
- //tilemapform.rightbtnclick(tilemapform.rightbtn);
+  tilemapform.tbBlockPlus1.Click;
 end;
 
 procedure TDjinnTileMapper.N6Click(Sender: TObject);
 begin
- //tilemapform.minusbtnclick(tilemapform.minusbtn);
+  tilemapform.tbMinus1.Click;
 end;
 
 procedure TDjinnTileMapper.N7Click(Sender: TObject);
 begin
- //tilemapform.plusbtnclick(tilemapform.plusbtn);
+  tilemapform.tbPlus1.Click;
 end;
 
 procedure TDjinnTileMapper.N8Click(Sender: TObject);
@@ -3374,12 +3383,7 @@ begin
   end;
 end;
 
-procedure TDjinnTileMapper.vstrfontClick(Sender: TObject);
-begin
-  vstrfont.Checked := not vstrfont.Checked;
-  if romopened then
-    datamapdraw;
-end;
+
 
 //***************************DUMP SCRIPT************************************////
 procedure TDjinnTileMapper.N20Click(Sender: TObject);
@@ -4061,6 +4065,15 @@ begin
   end;
 end;
 { TBlock }
+procedure TDjinnTileMapper.tmr1Timer(Sender: TObject);
+begin
+  BorderPen.DashOffset:= (Round(BorderPen.DashOffset) + 1) mod 8;
+  if dataform.Block.Visible then
+    dataform.Repaint;
+  if WSForm.Block.Visible then
+    WSForm.FormPaint(Self);
+end;
+
 initialization
   // Register the custom clipboard format
   CF_DTMDATA := RegisterClipBoardFormat(DDGData);

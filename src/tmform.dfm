@@ -3,7 +3,7 @@ object tilemapform: Ttilemapform
   Top = 212
   BorderIcons = [biSystemMenu, biMinimize]
   BorderWidth = 2
-  Caption = #1050#1072#1088#1090#1072' '#1090#1072#1081#1083#1086#1074
+  Caption = #1058#1072#1081#1083#1099
   ClientHeight = 358
   ClientWidth = 319
   Color = clBtnFace
@@ -86,6 +86,14 @@ object tilemapform: Ttilemapform
       OnDblClick = TileMapDblClick
       OnMouseDown = TileMapMouseDown
       OnMouseMove = TileMapMouseMove
+    end
+    object Block: TImage
+      Left = 72
+      Top = 72
+      Width = 105
+      Height = 105
+      Cursor = crSizeAll
+      Visible = False
     end
   end
   object pnl1: TPanel
@@ -487,6 +495,17 @@ object tilemapform: Ttilemapform
     object ActionAddressJumpList: TAction
       Caption = 'ActionAddressJumpList'
       OnExecute = ActionAddressJumpListExecute
+    end
+    object BlockCopy: TAction
+      Caption = 'BlockCopy'
+    end
+    object BlockPaste: TAction
+      Caption = 'BlockPaste'
+      OnExecute = BlockPasteExecute
+    end
+    object BlockSelectAll: TAction
+      Caption = 'BlockSelectAll'
+      OnExecute = BlockSelectAllExecute
     end
   end
 end
