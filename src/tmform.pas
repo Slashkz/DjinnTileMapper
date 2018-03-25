@@ -6,7 +6,7 @@ uses
   Windows, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms,
   Dialogs, StdCtrls, Spin, ExtCtrls, Buttons,
   ImgList,
-  ComCtrls, ToolWin, System.ImageList, System.Actions, Vcl.ActnList, Vcl.Menus;
+  ComCtrls, ToolWin, System.ImageList, System.Actions, Vcl.ActnList, Vcl.Menus, GdiPlus;
 
 type
   Ttilemapform = class(TForm)
@@ -53,6 +53,7 @@ type
     BlockCopy: TAction;
     BlockPaste: TAction;
     BlockSelectAll: TAction;
+    tbSelectTiles: TToolButton;
     procedure CodecboxChange(Sender: TObject);
     procedure CodecboxKeyPress(Sender: TObject; var Key: Char);
     procedure TileMapClick(Sender: TObject);
@@ -92,6 +93,17 @@ type
     procedure AddBookmarkClick(Sender: TObject);
     procedure BlockPasteExecute(Sender: TObject);
     procedure BlockSelectAllExecute(Sender: TObject);
+    procedure tbSelectTilesClick(Sender: TObject);
+    procedure TileMapMouseUp(Sender: TObject; Button: TMouseButton;
+      Shift: TShiftState; X, Y: Integer);
+    procedure BlockMouseDown(Sender: TObject; Button: TMouseButton;
+      Shift: TShiftState; X, Y: Integer);
+    procedure BlockMouseMove(Sender: TObject; Shift: TShiftState; X,
+      Y: Integer);
+    procedure BlockMouseUp(Sender: TObject; Button: TMouseButton;
+      Shift: TShiftState; X, Y: Integer);
+    procedure BlockCopyExecute(Sender: TObject);
+    procedure FormPaint(Sender: TObject);
   private
     { Private declarations }
   public
@@ -102,12 +114,17 @@ type
 
 var
   tilemapform: Ttilemapform;
+  bBlockMouseDown: Boolean;
+  X0, X1, Y0, Y1: Integer;
+  MouseLocation: TPoint;
+  BlockLocation: TPoint;
+  BlockSelected, W, H: Integer;
 
 implementation
 
 {$R *.dfm}
 
-uses dtmmain, teditf, dataf, BitmapUtils, WorkSpace, BookmarkInputForm;
+uses dtmmain, teditf, dataf, BitmapUtils, WorkSpace, BookmarkInputForm, Math, Vcl.Clipbrd;
 
 procedure TTileMapForm.SetSize(Width, Height: Integer);
 begin
@@ -190,14 +207,26 @@ end;
 
 
 
+procedure Ttilemapform.FormPaint(Sender: TObject);
+var
+  Graphics: IGPGraphics;
+begin
+  if Block.Visible then
+  begin
+    Graphics:= TGPGraphics.Create(Block.Canvas.Handle);
+    Graphics.DrawRectangle(WhitePen, 0, 0, Block.Width-1, Block.Height-1);
+    Graphics.DrawRectangle(BorderPen, 0, 0, Block.Width-1, Block.Height-1);
+    Block.Repaint;
+  end;
+end;
+
 procedure MoveTileSelection(TileSelection: TShape; ImageBounds: TRect; X, Y, W, H: Integer);
 begin
   if (X + W) >= ImageBounds.Width then
     X:= ImageBounds.Width - W;
   if (Y + H) >= ImageBounds.Height then
     Y:= ImageBounds.Height - H;
-  TileSelection.Left:= (ImageBounds.Left div TileWx2) * TileWx2 + (ImageBounds.Left mod TileWx2) + X;
-  TileSelection.Top:=  (ImageBounds.Top div TileHx2) * TileHx2 +  (ImageBounds.Top mod TileHx2)  + Y;
+  SetEffectivePosition(TileSelection, ImageBounds, X, Y);
 end;
 
 procedure Ttilemapform.TileMapClick(Sender: TObject);
@@ -384,23 +413,105 @@ end;
 procedure Ttilemapform.TileMapMouseDown(Sender: TObject; Button: TMouseButton;
   Shift: TShiftState; X, Y: Integer);
 begin
-  if (ssLeft in Shift) and (ssCtrl in Shift) and (bTMMouseDown = False) then
+  if (Button = mbLeft) and (ssCtrl in Shift) and (bTMMouseDown = False) then
   begin
     bTMMouseDown:= True;
     TileCaptured:= Map[Y div TileHx2, X div TileWx2];
+  end
+  else
+  if (Button = mbLeft) and tbSelectTiles.Down  then
+  begin
+    X0:= (X div TileWx2) * TileWx2;
+    Y0:= (Y div TileHx2) * TileHx2;
+    X1:= X0;
+    Y1:= Y0;
+    Block.Visible:= False;
+    bTMMouseDown:= True;
+    with TileMap.Canvas do
+    begin
+      Brush.Style:= bsFDiagonal;
+      Brush.Color:= clBlack;
+      Pen.Style:= psDashDot;
+      Pen.Mode:= pmNotXor;
+      Pen.Color:= clBlack;
+    end;
   end;
 end;
 
 
 procedure Ttilemapform.TileMapMouseMove(Sender: TObject; Shift: TShiftState; X,
   Y: Integer);
-Var b: Word;
+var
+  B: Word;
 begin
-  tmMouseX := X;
-  tmMouseY := Y;
-  b:= Map[Y div TileHx2, X div TileWx2];
+  tmMouseX := Min(X, TileMap.Width - 1);
+  tmMouseY := Min(Y, TileMap.Height - 1);
+  if ROMopened then
+  begin
+    if bTMMouseDown then
+    begin
+      TileMap.Canvas.Rectangle(X0, Y0, X1, Y1);//Стираем прямоугольник
+      X1:= Succ(tmMouseX div TileWx2) * TileWx2; Y1:= Succ(tmMouseY div TileHx2) * TileHx2;
+      TileMap.Canvas.Rectangle(X0, Y0, X1, Y1); //Рисуем на новом месте
+      //Stat1.Panels.Items[3].Text:= IntToStr(W) + ',' + IntToStr(H);
+    end;
+  end;
+  B:= Map[Y div TileHx2, X div TileWx2];
   stat1.Panels.Items[0].Text:= 'Адрес : ' + IntToHex(DataPos + B * TileW * TileH div (8 div bsz[DTM.TileType]), 6)+ ' / ' + IntToHex(ROMSize, 6);
   stat1.Panels.Items[1].Text:= 'Тайл : ' + IntToHex(b, 4) + ' = ' + IntToStr(b);
+end;
+
+procedure Ttilemapform.TileMapMouseUp(Sender: TObject; Button: TMouseButton;
+  Shift: TShiftState; X, Y: Integer);
+var
+  I, J, Nums, XX, YY, W, H, Temp: Integer;
+begin
+  if ROMopened and bTMMouseDown then
+  begin
+    if (X0 = X1) or (Y0 = Y1) then
+    begin
+      bMouseDown:= False;
+    end;
+    if X0 > X1 then
+    begin
+      Temp:= X0;
+      X0:= X1;
+      X1:= Temp;
+    end;
+    if Y0 > Y1 then
+    begin
+      Temp:= Y0;
+      Y0:= Y1;
+      Y1:= Temp;
+    end;
+
+    //Block.Left:= (TileMap.Left + X0) div TileWx2 * TileWx2 + (TileMap.Left mod TileWx2);
+    //Block.Top:=  (TileMap.Top + Y0) div TileHx2 * TileHx2 +  (TileMap.Top mod  TileHx2);
+    SetEffectivePosition(Block, TileMap.BoundsRect, X0, Y0);
+    W:= Abs(X1 - X0) div TileWx2;
+    H:= Abs(Y1 - Y0) div TileHx2;
+    Block.Width:= W * TileWx2;
+    Block.Height:= H * TileHx2;
+    Block.Picture.Bitmap.Width:= W * TileWx2;
+    Block.Picture.Bitmap.Height:= H * TileHx2;
+    Block.Picture.Bitmap.Canvas.CopyRect(Bounds(0, 0, Block.Width, Block.Height), TileMap.Canvas, Bounds((X0 div TileWx2) * TileWx2, (Y0 div TileHx2) * TileHx2, W *TileWx2, H * TileHx2));
+    TileMap.Canvas.Rectangle(X0, Y0, X1, Y1);//Стираем прямоугольник
+    TileMap.Canvas.Pen.Mode:= pmCopy; //Восстанавливаем режим карандаша
+    Block.Visible:= True;
+    XX:= (Block.Left - TileMap.Left -  (TileMap.Left mod TileWx2)) div TileWx2;
+    YY:= (Block.Top - TileMap.Top   -  (TileMap.Top mod  TileHx2)) div TileHx2;
+    Nums:= W * H; // Определяем кол-во выделенных тайлов
+    dtmmain.SetSize(SelectTiles, Nums);
+    for I := 0 to H - 1 do
+    begin
+      for J := 0 to W - 1 do
+        begin
+          SelectTiles[I * W + J].Index:= Map[YY + I,XX + J];
+        end;
+    end;
+    bTMMouseDown:= False;
+  end;
+
 end;
 
 procedure Ttilemapform.TileSelectionMouseDown(Sender: TObject;
@@ -673,14 +784,186 @@ end;
 
 
 
-procedure Ttilemapform.BlockSelectAllExecute(Sender: TObject);
+procedure Ttilemapform.BlockCopyExecute(Sender: TObject);
+var
+  I: Integer;
+  Data: THandle;
+  DataPtr: Pointer;
 begin
-//
+  if Block.Visible then
+  begin
+    // Allocate SizeOf(TBlock) * Length(Buffer) bytes from the heap
+    Data :=  GlobalAlloc(GMEM_FIXED or GMEM_ZEROINIT, (SizeOf(Word) * Length(SelectTiles)));
+    try
+      // Obtain a pointer to the first byte of the allocated memory
+      DataPtr := GlobalLock(Data);
+      try
+        // Move the data in Rec to the memory block
+        for I := Low(SelectTiles) to High(SelectTiles) do
+        begin
+          PWORD(DataPtr)^:= SelectTiles[I].Value;
+          IncPointer(DataPtr, SizeOf(Word));
+        end;
+        { Clipboard.Open must be called if multiple clipboard formats are
+          being copied to the clipboard at once. Otherwise, if only one
+          format is being copied the call isn't necessary }
+        ClipBoard.Open;
+        Clipboard.Clear;
+        try
+          // First copy the data as its custom format
+          ClipBoard.SetAsHandle(CF_DTMDATA, Data);
+          Clipboard.Assign(Block.Picture.Bitmap);
+          { If a call to Clipboard.Open is made you must match it
+            with a call to Clipboard.Close }
+        finally
+          Clipboard.Close
+        end;
+      finally
+        // Unlock the globally allocated memory
+        GlobalUnlock(Data);
+      end;
+  except
+    { A call to GlobalFree is required only if an exception occurs.
+      Otherwise, the clipboard takes over managing any allocated
+      memory to it.}
+    //Bitmap.Free;
+    GlobalFree(Data);
+    raise;
+  end;
+    Block.Visible:= False;
+  end;
 end;
 
-procedure Ttilemapform.BlockPasteExecute(Sender: TObject);
+procedure Ttilemapform.BlockMouseDown(Sender: TObject; Button: TMouseButton;
+  Shift: TShiftState; X, Y: Integer);
+var
+  XX, YY, XXX, YYY, W, H, I, J: Integer;
 begin
-//
+  if Button = mbLeft then
+  begin
+    BlockLocation.X:= X;
+    BlockLocation.Y:= Y;
+    bBlockMouseDown:= True;
+  end;
+  if Button = mbRight then
+  begin
+    TileMap.Canvas.CopyRect(Bounds(Block.Left - TileMap.Left - (TileMap.Left mod TileWx2), Block.Top - TileMap.Top - (TileMap.Top mod  TileHx2), Block.Width, Block.Height), Block.Canvas, Bounds(0, 0, Block.Width, Block.Height));
+    XXX:= (Block.Left - TileMap.Left -  (TileMap.Left mod TileWx2)) div TileWx2;
+    YYY:= (Block.Top - TileMap.Top   -  (TileMap.Top mod  TileHx2)) div TileHx2;
+    W:= Block.Width div TileWx2;  //Количиестов тайлов по горизонтали
+    H:= Block.Height div TileHx2; //Количество тайлов по вертикали
+
+    if Length(SelectTiles) = W * H then
+    begin
+      for I := 0 to H - 1 do
+      begin
+        for J := 0 to W - 1 do
+          begin
+            bTile.Canvas.CopyRect(Bounds(0, 0, tilew, tileh), BMap.Canvas, Bounds(MapXY[SelectTiles[I * W + J].Index].X * tilew, MapXY[SelectTiles[I * W + J].Index].Y * tileh, tilew, tileh));
+            dtmmain.TileMap[0, 0]:= Map[YYY + I, XXX + J];
+            for yy := 0 to tileh - 1 do
+              for xx := 0 to tilew - 1 do
+              begin
+                tx := xx;
+                ty := yy;
+                UpdatePixel;
+              end;
+          end;
+      end;
+    end;
+    Block.Visible:= False;
+    DTM.DrawTileMap;
+  end;
+end;
+
+
+procedure Ttilemapform.BlockMouseMove(Sender: TObject; Shift: TShiftState; X,
+  Y: Integer);
+var
+  NewBlockPos: TPoint;
+begin
+  if bBlockMouseDown then
+  begin
+    NewBlockPos.X:= (Block.Left + X - BlockLocation.X) div TileWx2 * TileWx2 + (TileMap.Left mod  TileWx2);
+    NewBlockPos.Y:= (Block.Top + Y - BlockLocation.Y) div TileHx2 * TileHx2 + (TileMap.Top mod  TileHx2);;
+    if ((NewBlockPos.X + Block.Width) <= TileMap.Width) and (NewBlockPos.X >= TileMap.Left) then
+    begin
+      Block.Left:= NewBlockPos.X;
+    end;
+    if ((NewBlockPos.Y + Block.Height) <= TileMap.Height) and (NewBlockPos.Y >= TileMap.Top) then
+    begin
+      Block.Top:= NewBlockPos.Y;
+    end;
+  end;
+end;
+
+procedure Ttilemapform.BlockMouseUp(Sender: TObject; Button: TMouseButton;
+  Shift: TShiftState; X, Y: Integer);
+begin
+  bBlockMouseDown:= False;
+end;
+
+
+procedure Ttilemapform.BlockSelectAllExecute(Sender: TObject);
+begin
+  if tbSelectTiles.Down then
+  begin
+    TileMapMouseDown(Self, mbLeft, [ssLeft], 0, 0);
+    Block.Left:= 0;
+    Block.Top:= 0;
+    TileMapMouseMove(Self, [ssLeft], TileMap.Width - 1, TileMap.Height - 1);
+    TileMapMouseUp(Self, mbLeft, [ssLeft], TileMap.Width div 2, TileMap.Height div 2);
+    Block.Visible:= True;
+  end;
+end;
+
+
+procedure Ttilemapform.BlockPasteExecute(Sender: TObject);
+var
+  Bitmap : TBitmap;
+  BlockCounts, I: Integer;
+  Data: THandle;
+  DataPtr: Pointer;
+begin
+ Bitmap := TBitMap.Create;
+ try
+   TileSelection.Visible:= False;
+   tbSelectTiles.Down := True;
+   Block.Visible:= True;
+   SetEffectivePosition(Block, TileMap.BoundsRect, scrlbx.HorzScrollBar.Position, scrlbx.VertScrollBar.Position);
+   Clipboard.Open;
+   if Clipboard.HasFormat(CF_BITMAP) then
+   begin
+      Block.Picture.RegisterClipboardFormat(cf_BitMap,TBitmap);
+      Bitmap.LoadFromClipBoardFormat(cf_BitMap,ClipBoard.GetAsHandle(cf_Bitmap),0);
+      Block.Picture.Bitmap.Assign(Bitmap);
+      Block.Width:= Bitmap.Width;
+      Block.Height:= Bitmap.Height;
+   end else
+    Exit;
+    if Clipboard.HasFormat(CF_DTMDATA) then
+    begin
+      Data:= Clipboard.GetAsHandle(CF_DTMDATA);
+      DataPtr:= GlobalLock(Data);
+      try
+        // Obtain the size of the data to retrieve
+        BlockCounts:= GlobalSize(Data) div SizeOf(Word);
+        dtmmain.SetSize(SelectTiles, BlockCounts);
+        for I := Low(SelectTiles) to High(SelectTiles) do
+        begin
+          //SelectTiles[I]:= TBlock.Create;
+          SelectTiles[I].Value:= PWord(DataPtr)^;
+          IncPointer(DataPtr, SizeOf(Word));
+        end;
+      finally
+        // Free the pointer to the memory block.
+        GlobalUnlock(Data);
+      end;
+   end;
+ finally
+   Bitmap.free;
+   Clipboard.Close;
+ end;
 end;
 
 
@@ -699,6 +982,22 @@ end;
 procedure Ttilemapform.tbPlus1Click(Sender: TObject);
 begin
  TMapScroll.position := DTM.ROMpos + 1;
+end;
+
+procedure Ttilemapform.tbSelectTilesClick(Sender: TObject);
+begin
+  TileSelection.Visible:= not tbSelectTiles.Down;
+  if tbSelectTiles.Down = false then
+  begin
+    Block.Visible:= False;
+    TileMap.Cursor:= crDefault;
+    Grid.Cursor:= crDefault;
+  end
+  else
+  begin
+    TileMap.Cursor:= crCross;
+    Grid.Cursor:= crCross;
+  end;
 end;
 
 procedure Ttilemapform.tbShowHexClick(Sender: TObject);

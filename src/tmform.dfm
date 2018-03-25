@@ -16,6 +16,7 @@ object tilemapform: Ttilemapform
   OldCreateOrder = False
   ScreenSnap = True
   OnCreate = FormCreate
+  OnPaint = FormPaint
   PixelsPerInch = 96
   TextHeight = 13
   object TMapScroll: TScrollBar
@@ -26,7 +27,7 @@ object tilemapform: Ttilemapform
     Align = alRight
     Enabled = False
     Kind = sbVertical
-    LargeChange = 10
+    LargeChange = 16
     PageSize = 0
     ParentShowHint = False
     ShowHint = False
@@ -52,6 +53,7 @@ object tilemapform: Ttilemapform
       OnDblClick = TileMapDblClick
       OnMouseDown = TileMapMouseDown
       OnMouseMove = TileMapMouseMove
+      OnMouseUp = TileMapMouseUp
     end
     object TileSelection: TShape
       Left = 0
@@ -75,6 +77,7 @@ object tilemapform: Ttilemapform
       OnDblClick = TileMapDblClick
       OnMouseDown = TileMapMouseDown
       OnMouseMove = TileMapMouseMove
+      OnMouseUp = TileMapMouseUp
     end
     object Grid: TImage
       Left = 0
@@ -86,6 +89,7 @@ object tilemapform: Ttilemapform
       OnDblClick = TileMapDblClick
       OnMouseDown = TileMapMouseDown
       OnMouseMove = TileMapMouseMove
+      OnMouseUp = TileMapMouseUp
     end
     object Block: TImage
       Left = 72
@@ -94,6 +98,9 @@ object tilemapform: Ttilemapform
       Height = 105
       Cursor = crSizeAll
       Visible = False
+      OnMouseDown = BlockMouseDown
+      OnMouseMove = BlockMouseMove
+      OnMouseUp = BlockMouseUp
     end
   end
   object pnl1: TPanel
@@ -276,16 +283,24 @@ object tilemapform: Ttilemapform
         ShowHint = True
         OnClick = TileMapGridClick
       end
-      object ToolButton1: TToolButton
+      object tbSelectTiles: TToolButton
         Left = 46
         Top = 0
-        Width = 67
+        Caption = 'tbSelectTiles'
+        ImageIndex = 79
+        Style = tbsCheck
+        OnClick = tbSelectTilesClick
+      end
+      object ToolButton1: TToolButton
+        Left = 69
+        Top = 0
+        Width = 40
         Caption = 'ToolButton1'
         ImageIndex = 12
         Style = tbsDivider
       end
       object TileEditSize: TComboBox
-        Left = 113
+        Left = 109
         Top = 0
         Width = 79
         Height = 21
@@ -302,7 +317,7 @@ object tilemapform: Ttilemapform
           'x32(8x8)')
       end
       object Codecbox: TComboBox
-        Left = 192
+        Left = 188
         Top = 0
         Width = 105
         Height = 21
@@ -498,13 +513,17 @@ object tilemapform: Ttilemapform
     end
     object BlockCopy: TAction
       Caption = 'BlockCopy'
+      ShortCut = 16451
+      OnExecute = BlockCopyExecute
     end
     object BlockPaste: TAction
       Caption = 'BlockPaste'
+      ShortCut = 16470
       OnExecute = BlockPasteExecute
     end
     object BlockSelectAll: TAction
       Caption = 'BlockSelectAll'
+      ShortCut = 16449
       OnExecute = BlockSelectAllExecute
     end
   end
